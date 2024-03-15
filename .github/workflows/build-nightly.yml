@@ -11,7 +11,5 @@ jobs:
     uses: liquibase/build-logic/.github/workflows/os-extension-test.yml@v0.6.5
     with:
       nightly: true
+      java: "[ 17, 21 ]"
     secrets: inherit
-    strategy:
-      matrix:
-        java: [ 17, 21 ]
