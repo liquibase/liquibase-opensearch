@@ -12,3 +12,6 @@ jobs:
     with:
       nightly: true
     secrets: inherit
+    strategy:
+      matrix:
+        java: [ 17, 21 ]
