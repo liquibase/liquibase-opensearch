@@ -9,7 +9,10 @@ on:
       - synchronize
 
 jobs:
-  #delete this block if the repository you are creating is a PRO extension
   build-test:
     uses: liquibase/build-logic/.github/workflows/os-extension-test.yml@v0.5.3
     secrets: inherit
+    strategy:
+      matrix:
+        java: [ 17, 21 ]
+
