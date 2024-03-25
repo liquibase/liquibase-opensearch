@@ -16,5 +16,5 @@ jobs:
 
   #delete this block if the repository you are creating is a CORE extension
   build-test:
-    uses: liquibase/build-logic/.github/workflows/pro-extension-test.yml@v0.6.5
+    uses: liquibase/build-logic/.github/workflows/pro-extension-test.yml@v0.6.7
     secrets: inherit
