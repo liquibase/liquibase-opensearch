@@ -9,12 +9,17 @@ on:
       - synchronize
 
 jobs:
-  #delete this block if the repository you are creating is a PRO extension
-  build-test:
-    uses: liquibase/build-logic/.github/workflows/os-extension-test.yml@v0.5.3
-    secrets: inherit
 
-  #delete this block if the repository you are creating is a CORE extension
+  authorize:
+    environment: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name != github.repository && 'external' || 'internal' }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: true
+
   build-test:
-    uses: liquibase/build-logic/.github/workflows/pro-extension-test.yml@v0.6.5
+    needs: authorize
+    uses: liquibase/build-logic/.github/workflows/os-extension-test.yml@v0.6.5
     secrets: inherit
+    with:
+      java: "[ 17, 21 ]"
+
