@@ -42,6 +42,15 @@
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
+        <sonar.organization>liquibase</sonar.organization>
+        <sonar.projectKey>${sonar.organization}_${project.artifactId}</sonar.projectKey>
+        <sonar.projectName>${project.name}</sonar.projectName>
+        <sonar.projectDescription>${project.description}</sonar.projectDescription>
+        <sonar.host.url>https://sonarcloud.io</sonar.host.url>
+        <sonar.scm.provider>git</sonar.scm.provider>
+        <sonar.qualitygate.wait>true</sonar.qualitygate.wait>
+        <sonar.sources>src/main/java</sonar.sources>
+        <sonar.tests>src/test/groovy</sonar.tests>
     </properties>
 
     <dependencies>
@@ -52,4 +61,13 @@
         </dependency>
     </dependencies>
 
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.sonarsource.scanner.maven</groupId>
+                <artifactId>sonar-maven-plugin</artifactId>
+                <version>3.11.0.3922</version>
+            </plugin>
+        </plugins>
+    </build>
 </project>
