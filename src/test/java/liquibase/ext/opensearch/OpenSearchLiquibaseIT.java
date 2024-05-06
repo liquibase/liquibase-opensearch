@@ -17,4 +17,12 @@ public class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
         assertThat(this.database.getDatabaseMajorVersion()).isEqualTo(2);
     }
 
+    @SneakyThrows
+    @Test
+    public void itCreatesTheChangelogAndLockIndices() {
+        this.doLiquibaseUpdate("liquibase/ext/changelog.empty.yaml");
+        assertThat(this.indexExists(this.database.getDatabaseChangeLogLockTableName())).isTrue();
+        assertThat(this.indexExists(this.database.getDatabaseChangeLogTableName())).isTrue();
+    }
+
 }
