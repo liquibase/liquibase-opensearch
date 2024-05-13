@@ -25,4 +25,31 @@ public class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
         assertThat(this.indexExists(this.database.getDatabaseChangeLogTableName())).isTrue();
     }
 
+    @SneakyThrows
+    @Test
+    public void itExecutesAHttpRequestAndCreatesTheIndex() {
+        this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.yaml");
+        assertThat(this.indexExists("testindex")).isTrue();
+    }
+
+    @SneakyThrows
+    @Test
+    public void itHandlesReRuns() {
+        this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.always.yaml");
+        assertThat(this.indexExists("testindex-always")).isTrue();
+        assertThat(this.getDocumentCount("testindex-always")).isEqualTo(1);
+        this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.always.yaml");
+        assertThat(this.getDocumentCount("testindex-always")).isEqualTo(2);
+        this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.always.yaml");
+        assertThat(this.getDocumentCount("testindex-always")).isEqualTo(3);
+    }
+
+    @SneakyThrows
+    @Test
+    public void itRespectsTheContextFilter() {
+        this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.contexts.yaml", "context1");
+        assertThat(this.indexExists("testindex1")).isTrue();
+        assertThat(this.indexExists("testindex2")).isFalse();
+    }
+
 }

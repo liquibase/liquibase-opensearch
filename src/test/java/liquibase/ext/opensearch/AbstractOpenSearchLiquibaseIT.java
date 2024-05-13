@@ -10,6 +10,7 @@ import lombok.SneakyThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInstance;
 import org.opensearch.client.opensearch.OpenSearchClient;
+import org.opensearch.client.opensearch.core.CountRequest;
 import org.opensearch.client.opensearch.indices.ExistsRequest;
 import org.opensearch.testcontainers.OpensearchContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
@@ -47,11 +48,16 @@ public abstract class AbstractOpenSearchLiquibaseIT {
         return this.connection.getOpenSearchClient();
     }
 
-    protected void doLiquibaseUpdate(final String changeLogFile) throws Exception {
+    protected void doLiquibaseUpdate(final String changeLogFile, final String contexts) throws Exception {
         new CommandScope(UpdateCommandStep.COMMAND_NAME)
                 .addArgumentValue(DbUrlConnectionCommandStep.DATABASE_ARG, this.database)
                 .addArgumentValue(UpdateCommandStep.CHANGELOG_FILE_ARG, changeLogFile)
+                .addArgumentValue(UpdateCommandStep.CONTEXTS_ARG, contexts)
                 .execute();
+    }
+
+    protected void doLiquibaseUpdate(final String changeLogFile) throws Exception {
+        this.doLiquibaseUpdate(changeLogFile, "");
     }
 
     protected boolean indexExists(final String indexName) throws Exception {
@@ -59,6 +65,13 @@ public abstract class AbstractOpenSearchLiquibaseIT {
                 .index(indexName)
                 .build();
         return this.getOpenSearchClient().indices().exists(request).value();
+    }
+
+    protected long getDocumentCount(final String indexName) throws Exception {
+        final var request = new CountRequest.Builder()
+                .index(indexName)
+                .build();
+        return this.getOpenSearchClient().count(request).count();
     }
 
 }
