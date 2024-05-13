@@ -25,12 +25,16 @@ import liquibase.database.Database;
 import liquibase.exception.DatabaseException;
 import liquibase.executor.AbstractExecutor;
 import liquibase.ext.opensearch.database.OpenSearchLiquibaseDatabase;
+import liquibase.ext.opensearch.statement.OpenSearchExecuteStatement;
 import liquibase.logging.Logger;
 import liquibase.servicelocator.LiquibaseService;
 import liquibase.sql.visitor.SqlVisitor;
 import liquibase.statement.SqlStatement;
 import lombok.NoArgsConstructor;
+import org.opensearch.client.opensearch.generic.Body;
+import org.opensearch.client.opensearch.generic.OpenSearchClientException;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -125,13 +129,25 @@ public class OpenSearchExecutor extends AbstractExecutor {
 
     @Override
     public void execute(final SqlStatement sql, final List<SqlVisitor> sqlVisitors) throws DatabaseException {
-        throw new DatabaseException("liquibase-opensearch extension cannot execute changeset \n" +
-                "Unknown type: " + sql.getClass().getName() +
-                "\nPlease check the following common causes:\n" +
-                "- Verify change set definitions for common error such as: changeType name, changeSet attributes spelling " +
-                "(such as runWith,  context, etc.), and punctuation.\n" +
-                "- Verify that changesets have all the required changeset attributes and do not have invalid attributes for the designated change type.\n" +
-                "- Double-check to make sure your basic setup includes all needed extensions in your Java classpath");
+        if (sql instanceof OpenSearchExecuteStatement) {
+            try {
+                ((OpenSearchExecuteStatement) sql).execute(getDatabase());
+            } catch (final OpenSearchClientException e) {
+                try (var r = e.response()) {
+                    throw new DatabaseException("Could not execute: %s".formatted(r.getBody().map(Body::bodyAsString).orElse("")), e);
+                } catch (IOException ex) {
+                    throw new DatabaseException("Could not execute", e);
+                }
+            }
+        } else {
+            throw new DatabaseException("liquibase-opensearch extension cannot execute changeset \n" +
+                    "Unknown type: " + sql.getClass().getName() +
+                    "\nPlease check the following common causes:\n" +
+                    "- Verify change set definitions for common error such as: changeType name, changeSet attributes spelling " +
+                    "(such as runWith,  context, etc.), and punctuation.\n" +
+                    "- Verify that changesets have all the required changeset attributes and do not have invalid attributes for the designated change type.\n" +
+                    "- Double-check to make sure your basic setup includes all needed extensions in your Java classpath");
+        }
     }
 
     @Override
@@ -141,7 +157,7 @@ public class OpenSearchExecutor extends AbstractExecutor {
 
     @Override
     public int update(final SqlStatement sql, final List<SqlVisitor> sqlVisitors) throws DatabaseException {
-        throw new IllegalArgumentException();
+        throw new UnsupportedOperationException("no update supported, use execute instead");
     }
 
     @Override
