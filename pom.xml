@@ -41,6 +41,7 @@
     </scm>
 
     <properties>
+        <liquibase.version>4.28.0</liquibase.version>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <sonar.organization>liquibase</sonar.organization>
@@ -58,7 +59,7 @@
         <dependency>
             <groupId>org.liquibase</groupId>
             <artifactId>liquibase-core</artifactId>
-            <version>4.28.0</version>
+            <version>${liquibase.version}</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
