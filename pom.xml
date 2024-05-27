@@ -59,7 +59,7 @@
         <dependency>
             <groupId>org.liquibase</groupId>
             <artifactId>liquibase-core</artifactId>
-            <version>4.28.0</version>
+            <version>${liquibase.version}</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
