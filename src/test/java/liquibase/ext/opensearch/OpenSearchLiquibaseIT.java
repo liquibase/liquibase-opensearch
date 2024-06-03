@@ -1,7 +1,13 @@
 package liquibase.ext.opensearch;
 
+import liquibase.command.CommandScope;
+import liquibase.command.core.ClearChecksumsCommandStep;
+import liquibase.command.core.UpdateCommandStep;
+import liquibase.command.core.helpers.DbUrlConnectionArgumentsCommandStep;
+import liquibase.command.core.helpers.DbUrlConnectionCommandStep;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.Test;
+import org.opensearch.client.opensearch._types.query_dsl.Query;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -50,6 +56,23 @@ public class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
         this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.contexts.yaml", "context1");
         assertThat(this.indexExists("testindex1")).isTrue();
         assertThat(this.indexExists("testindex2")).isFalse();
+    }
+
+    @SneakyThrows
+    @Test
+    public void itCanClearAllChecksums() {
+        // run at least one change set
+        this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.yaml");
+
+        final var countBeforeClear = this.getDocumentCount("databasechangelog", new Query.Builder().exists(e -> e.field("lastCheckSum")).build());
+        assertThat(countBeforeClear).isNotZero();
+
+        new CommandScope(ClearChecksumsCommandStep.COMMAND_NAME)
+                .addArgumentValue(DbUrlConnectionArgumentsCommandStep.DATABASE_ARG, this.database)
+                .execute();
+
+        final var countAfterClear = this.getDocumentCount("databasechangelog", new Query.Builder().exists(e -> e.field("lastCheckSum")).build());
+        assertThat(countAfterClear).isZero();
     }
 
 }

@@ -163,7 +163,14 @@ public class OpenSearchHistoryService extends AbstractNoSqlHistoryService<OpenSe
 
     @Override
     public void clearAllCheckSums() throws DatabaseException {
-        throw new UnsupportedOperationException();
+        try {
+            this.getOpenSearchClient()
+                    .updateByQuery(r -> r.index(this.getDatabaseChangeLogTableName())
+                            .script(s -> s.inline(i -> i.source("ctx._source.lastCheckSum = null")
+                                    .lang("painless"))));
+        } catch (IOException e) {
+            throw new DatabaseException(e);
+        }
     }
 
     @Override
