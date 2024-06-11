@@ -1,0 +1,41 @@
+databaseChangeLog:
+  - changeSet:
+      id: 2000
+      author: test
+      labels: httpRequestLabel
+      context: context1
+      comment: httpRequestComment
+      changes:
+        - httpRequest:
+            method: PUT
+            path: /testindex1
+            body: >
+              {
+                "mappings": {
+                  "properties": {
+                    "testfield": {
+                      "type": "text"
+                    }
+                  }
+                }
+              }
+  - changeSet:
+      id: 2001
+      author: test
+      labels: httpRequestLabel
+      context: context2
+      comment: httpRequestComment
+      changes:
+        - httpRequest:
+            method: PUT
+            path: /testindex2
+            body: >
+              {
+                "mappings": {
+                  "properties": {
+                    "testfield": {
+                      "type": "text"
+                    }
+                  }
+                }
+              }
