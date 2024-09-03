@@ -33,9 +33,16 @@ public class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
 
     @SneakyThrows
     @Test
-    public void itExecutesAHttpRequestAndCreatesTheIndex() {
+    public void itExecutesAHttpRequestAndCreatesTheIndexWithYAMLChangelog() {
         this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.yaml");
         assertThat(this.indexExists("testindex")).isTrue();
+    }
+
+    @SneakyThrows
+    @Test
+    public void itExecutesAHttpRequestAndCreatesTheIndexWithXMLChangelog() {
+        this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.xml");
+        assertThat(this.indexExists("xmltestindex")).isTrue();
     }
 
     @SneakyThrows

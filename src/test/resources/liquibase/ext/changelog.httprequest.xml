@@ -1,0 +1,27 @@
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xmlns:opensearch="http://www.liquibase.org/xml/ns/opensearch"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.29.xsd
+        http://www.liquibase.org/xml/ns/opensearch http://www.liquibase.org/xml/ns/opensearch/liquibase-opensearch-1.0.xsd">
+
+    <changeSet id="10000" author="test" labels="XMLhttpRequestLabel" context="httpRequestContext">
+        <comment>httpRequestComment</comment>
+        <opensearch:httpRequest>
+            <opensearch:method>PUT</opensearch:method>
+            <opensearch:path>/xmltestindex</opensearch:path>
+            <opensearch:body>
+                {
+                    "mappings": {
+                        "properties": {
+                            "testfield": {
+                                "type": "text"
+                            }
+                        }
+                    }
+                }
+            </opensearch:body>
+        </opensearch:httpRequest>
+    </changeSet>
+
+</databaseChangeLog>
