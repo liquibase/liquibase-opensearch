@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+            targetNamespace="http://www.liquibase.org/xml/ns/opensearch"
+            xmlns="http://www.liquibase.org/xml/ns/opensearch"
+            elementFormDefault="qualified">
+
+    <xsd:simpleType name="httpMethods" final="restriction">
+        <xsd:restriction base="xsd:string">
+            <!--
+             as per https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods
+
+             the following methods have been intentionally skipped as they cannot be used to modify data in OpenSearch:
+             GET, HEAD, CONNECT, OPTIONS, TRACE
+             -->
+            <xsd:enumeration value="POST" />
+            <xsd:enumeration value="PUT" />
+            <xsd:enumeration value="DELETE" />
+            <xsd:enumeration value="PATCH" />
+        </xsd:restriction>
+    </xsd:simpleType>
+    
+    <xsd:element name="httpRequest">
+        <xsd:complexType>
+            <xsd:all>
+                <xsd:element name="method" type="httpMethods" />
+                <xsd:element name="path" type="xsd:string" />
+                <xsd:element name="body" type="xsd:string" />
+            </xsd:all>
+        </xsd:complexType>
+    </xsd:element>
+
+</xsd:schema>

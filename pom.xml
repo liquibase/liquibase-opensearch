@@ -6,7 +6,7 @@
     <parent>
         <groupId>org.liquibase</groupId>
         <artifactId>liquibase-parent-pom</artifactId>
-        <version>0.4.5</version> <!-- Replace with the desired version -->
+        <version>0.4.5</version>
     </parent>
 
     <groupId>org.liquibase.ext</groupId>
@@ -15,22 +15,22 @@
     <name>Liquibase Opensearch Extension</name>
     <packaging>jar</packaging>
 
-    <description>Describe your extension here.</description>
-    <url>https://docs.liquibase.com</url>
+    <description>Liquibase extension to manage changesets for OpenSearch.</description>
+    <url>https://github.com/liquibase/liquibase-opensearch</url>
 
     <licenses>
         <license>
-            <name>Liquibase EULA</name>
-            <url>https://www.liquibase.com/eula</url>
+            <url>https://www.apache.org/licenses/LICENSE-2.0</url>
+            <name>Apache License, Version 2.0</name>
         </license>
     </licenses>
 
     <developers>
         <developer>
-            <name>Your Name</name>
-            <email>youremail@example.com</email>
-            <organization>Liquibase</organization>
-            <organizationUrl>https://www.liquibase.com/</organizationUrl>
+            <name>Ralph Ursprung</name>
+            <email>ralph.ursprung@avaloq.com</email>
+            <organization>Avaloq Group AG</organization>
+            <organizationUrl>https://www.avaloq.com/</organizationUrl>
         </developer>
     </developers>
 
@@ -62,14 +62,87 @@
             <version>${liquibase.version}</version>
         </dependency>
         <dependency>
+            <groupId>org.opensearch.client</groupId>
+            <artifactId>opensearch-java</artifactId>
+            <version>2.14.0</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.opensearch.client</groupId>
+                    <artifactId>opensearch-rest-client</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.32</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>2.17.2</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.17.2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents.core5</groupId>
+            <artifactId>httpcore5</artifactId>
+            <version>5.2.5</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents.client5</groupId>
+            <artifactId>httpclient5</artifactId>
+            <version>5.3.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.10.3</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <version>3.26.3</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers</artifactId>
+            <version>1.20.1</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.opensearch</groupId>
+            <artifactId>opensearch-testcontainers</artifactId>
+            <version>2.1.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
+            <version>2.0.16</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
             <version>2.0.16</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
 
     <build>
+        <resources>
+            <resource>
+                <directory>${project.basedir}/src/main/resources</directory>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>org.sonarsource.scanner.maven</groupId>

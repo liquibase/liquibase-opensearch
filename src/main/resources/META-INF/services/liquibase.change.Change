@@ -1,2 +1,1 @@
-com.example.change.ClearPasswordsChange
-com.example.change.PrefixedCreateTableChange
+liquibase.ext.opensearch.change.HttpRequestChange
