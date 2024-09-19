@@ -72,7 +72,7 @@ public abstract class AbstractNoSqlDatabase extends AbstractJdbcDatabase impleme
 
     @Override
     public String getLineComment() {
-        throw new UnsupportedOperationException();
+        return "";
     }
 
     @Override
