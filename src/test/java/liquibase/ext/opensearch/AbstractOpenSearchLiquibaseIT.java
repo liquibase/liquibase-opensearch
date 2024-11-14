@@ -70,6 +70,7 @@ public abstract class AbstractOpenSearchLiquibaseIT {
     }
 
     protected long getDocumentCount(final String indexName, final Query query) throws Exception {
+        this.getOpenSearchClient().indices().refresh(r -> r.index(indexName));
         final var request = new CountRequest.Builder()
                 .index(indexName)
                 .query(query)
