@@ -3,7 +3,6 @@ package liquibase.ext.opensearch;
 import liquibase.command.CommandScope;
 import liquibase.command.core.UpdateCommandStep;
 import liquibase.command.core.helpers.DbUrlConnectionArgumentsCommandStep;
-import liquibase.command.core.helpers.DbUrlConnectionCommandStep;
 import liquibase.database.DatabaseFactory;
 import liquibase.ext.opensearch.database.OpenSearchConnection;
 import liquibase.ext.opensearch.database.OpenSearchLiquibaseDatabase;
@@ -16,25 +15,21 @@ import org.opensearch.client.opensearch.core.CountRequest;
 import org.opensearch.client.opensearch.indices.ExistsRequest;
 import org.opensearch.testcontainers.OpensearchContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 import java.time.Duration;
 
 @TestInstance(TestInstance.Lifecycle.PER_METHOD)
+@Testcontainers
 public abstract class AbstractOpenSearchLiquibaseIT {
-    final static OpensearchContainer<?> container;
-
     protected OpenSearchLiquibaseDatabase database;
     private OpenSearchConnection connection;
 
-    static {
-        container = new OpensearchContainer<>(DockerImageName
-                .parse("opensearchproject/opensearch:2.16.0")
-        )
-                .waitingFor(Wait.forHttp("/").forPort(9200))
-                .withStartupTimeout(Duration.ofSeconds(120));
-        container.start();
-    }
+    @Container
+    public OpensearchContainer<?> container = new OpensearchContainer<>(DockerImageName.parse("opensearchproject/opensearch:2.18.0"));
+
 
     @SneakyThrows
     @BeforeEach
