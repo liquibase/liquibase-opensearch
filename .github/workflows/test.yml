@@ -2,7 +2,7 @@ name: Build and Test
 
 on:
   workflow_dispatch:
-  pull_request_target:
+  pull_request:
     types:
       - opened
       - reopened
@@ -38,7 +38,7 @@ jobs:
         java-version: ${{ matrix.java }}
         distribution: 'adopt'
     - name: Test With Maven
-      run: mvn clean integration-test
+      run: ./mvnw clean integration-test
 
   dependabot:
     needs: integration-tests
