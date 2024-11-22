@@ -5,6 +5,7 @@ import liquibase.nosql.database.AbstractNoSqlConnection;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.SneakyThrows;
 import org.apache.hc.client5.http.auth.AuthScope;
 import org.apache.hc.client5.http.auth.UsernamePasswordCredentials;
 import org.apache.hc.client5.http.impl.auth.BasicCredentialsProvider;
@@ -28,10 +29,15 @@ import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.sql.Driver;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.stream.Collectors;
 
 import static liquibase.ext.opensearch.database.OpenSearchLiquibaseDatabase.OPENSEARCH_PREFIX;
+import static liquibase.ext.opensearch.database.OpenSearchLiquibaseDatabase.OPENSEARCH_URI_SEPARATOR;
 
 @Getter
 @Setter
@@ -41,7 +47,7 @@ public class OpenSearchConnection extends AbstractNoSqlConnection {
     private OpenSearchClient openSearchClient;
     private Optional<OpenSearchVersionInfo> openSearchVersion = Optional.empty();
 
-    private URI uri;
+    private List<URI> uris;
     private Properties connectionProperties;
 
     @Override
@@ -62,10 +68,21 @@ public class OpenSearchConnection extends AbstractNoSqlConnection {
         this.connectionProperties = driverProperties;
 
         try {
-            this.uri = new URI(realUrl);
-            this.connect(this.uri, driverProperties);
+            this.uris = Arrays.stream(realUrl.split(OPENSEARCH_URI_SEPARATOR))
+                    .map(this::toUri)
+                    .filter(Objects::nonNull)
+                    .toList();
+            this.connect();
         } catch (final Exception e) {
-            throw new DatabaseException("Could not open connection to database: " + realUrl);
+            throw new DatabaseException("Could not open connection to database: " + realUrl, e);
+        }
+    }
+
+    private URI toUri(String uri) {
+        try {
+            return URI.create(uri);
+        } catch (IllegalArgumentException ex) {
+            return null;
         }
     }
 
@@ -73,7 +90,7 @@ public class OpenSearchConnection extends AbstractNoSqlConnection {
     public void close() throws DatabaseException {
         this.openSearchClient = null;
         this.connectionProperties = null;
-        this.uri = null;
+        this.uris = null;
     }
 
     @Override
@@ -88,7 +105,9 @@ public class OpenSearchConnection extends AbstractNoSqlConnection {
 
     @Override
     public String getURL() {
-        return this.uri.toString();
+        return this.uris.stream()
+                .map(URI::toString)
+                .collect(Collectors.joining(OPENSEARCH_URI_SEPARATOR));
     }
 
     @Override
@@ -101,21 +120,21 @@ public class OpenSearchConnection extends AbstractNoSqlConnection {
         return this.openSearchClient == null;
     }
 
-    private void connect(final URI uri, final Properties info) throws DatabaseException {
-        final HttpHost host = HttpHost.create(uri);
+    private void connect() {
+        final var hosts = this.uris.stream().map(HttpHost::create).toList();
+        final var hostsArray = hosts.toArray(HttpHost[]::new);
 
         final var transport = ApacheHttpClient5TransportBuilder
-                .builder(host)
+                .builder(hostsArray)
                 .setHttpClientConfigCallback(httpClientBuilder -> {
                     // TODO: support other credential providers
-                    final var username = Optional.ofNullable(info.getProperty("user"));
-                    final var password = Optional.ofNullable(info.getProperty("password"));
+                    final var username = Optional.ofNullable(this.connectionProperties.getProperty("user"));
+                    final var password = Optional.ofNullable(this.connectionProperties.getProperty("password"));
 
                     if (username.isPresent()) {
-                        final BasicCredentialsProvider credentialsProvider = new BasicCredentialsProvider();
-                        credentialsProvider.setCredentials(new AuthScope(host),
-                                new UsernamePasswordCredentials(username.get(), password.orElse("").toCharArray()));
-
+                        final var credentialsProvider = new BasicCredentialsProvider();
+                        final var credentials = new UsernamePasswordCredentials(username.get(), password.orElse("").toCharArray());
+                        hosts.forEach(host -> credentialsProvider.setCredentials(new AuthScope(host), credentials));
                         httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider);
                     } else if (password.isPresent()) {
                         throw new RuntimeException("password provided but username not set!");

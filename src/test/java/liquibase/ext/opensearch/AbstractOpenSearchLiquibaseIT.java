@@ -25,10 +25,12 @@ import java.time.Duration;
 @Testcontainers
 public abstract class AbstractOpenSearchLiquibaseIT {
     protected OpenSearchLiquibaseDatabase database;
-    private OpenSearchConnection connection;
+    protected OpenSearchConnection connection;
+
+    protected static final String OPENSEARCH_DOCKER_IMAGE_NAME = "opensearchproject/opensearch:2.18.0";
 
     @Container
-    public OpensearchContainer<?> container = new OpensearchContainer<>(DockerImageName.parse("opensearchproject/opensearch:2.18.0"));
+    protected OpensearchContainer<?> container = new OpensearchContainer<>(DockerImageName.parse(OPENSEARCH_DOCKER_IMAGE_NAME));
 
 
     @SneakyThrows
