@@ -10,6 +10,7 @@ public class OpenSearchLiquibaseDatabase extends AbstractNoSqlDatabase {
     public static final String PRODUCT_NAME = "OpenSearch";
     public static final String PRODUCT_SHORT_NAME = "opensearch";
     public static final String OPENSEARCH_PREFIX = PRODUCT_SHORT_NAME + ":";
+    public static final String OPENSEARCH_URI_SEPARATOR = ",";
 
     @Override
     public void dropDatabaseObjects(final CatalogAndSchema schemaToDrop) throws LiquibaseException {
