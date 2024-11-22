@@ -63,9 +63,9 @@ public class OpenSearchConnection extends AbstractNoSqlConnection {
 
         try {
             this.uri = new URI(realUrl);
-            this.connect(this.uri, driverProperties);
+            this.connect();
         } catch (final Exception e) {
-            throw new DatabaseException("Could not open connection to database: " + realUrl);
+            throw new DatabaseException("Could not open connection to database: " + realUrl, e);
         }
     }
 
@@ -101,15 +101,15 @@ public class OpenSearchConnection extends AbstractNoSqlConnection {
         return this.openSearchClient == null;
     }
 
-    private void connect(final URI uri, final Properties info) throws DatabaseException {
-        final HttpHost host = HttpHost.create(uri);
+    private void connect() throws DatabaseException {
+        final HttpHost host = HttpHost.create(this.uri);
 
         final var transport = ApacheHttpClient5TransportBuilder
                 .builder(host)
                 .setHttpClientConfigCallback(httpClientBuilder -> {
                     // TODO: support other credential providers
-                    final var username = Optional.ofNullable(info.getProperty("user"));
-                    final var password = Optional.ofNullable(info.getProperty("password"));
+                    final var username = Optional.ofNullable(this.connectionProperties.getProperty("user"));
+                    final var password = Optional.ofNullable(this.connectionProperties.getProperty("password"));
 
                     if (username.isPresent()) {
                         final BasicCredentialsProvider credentialsProvider = new BasicCredentialsProvider();
