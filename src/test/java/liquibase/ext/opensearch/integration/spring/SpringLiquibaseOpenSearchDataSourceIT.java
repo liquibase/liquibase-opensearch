@@ -13,9 +13,11 @@ import static liquibase.ext.opensearch.AbstractOpenSearchLiquibaseIT.OPENSEARCH_
 
 @Testcontainers
 @SpringBootTest(properties = {
-    "spring.liquibase.enabled=false"
+    "spring.datasource.url=jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE",
+    "spring.datasource.platform=h2",
+    "spring.liquibase.change-log=classpath:/liquibase/db/liquibase-changeLog.xml"
 })
-class SpringLiquibaseOpenSearchIT {
+class SpringLiquibaseOpenSearchDataSourceIT {
 
     @Container
     protected static OpensearchContainer<?> container = new OpensearchContainer<>(DockerImageName.parse(OPENSEARCH_DOCKER_IMAGE_NAME));
