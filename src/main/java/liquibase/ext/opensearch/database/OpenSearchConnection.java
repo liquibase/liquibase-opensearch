@@ -50,6 +50,12 @@ public class OpenSearchConnection extends AbstractNoSqlConnection {
     private List<URI> uris;
     private Properties connectionProperties;
 
+    public OpenSearchConnection(final OpenSearchClient openSearchClient) {
+        super();
+        this.openSearchClient = openSearchClient;
+        // TODO: construct uris from client if possible
+    }
+
     @Override
     public boolean supports(final String url) {
         if (url == null) {
