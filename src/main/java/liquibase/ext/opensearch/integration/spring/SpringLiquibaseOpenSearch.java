@@ -2,49 +2,70 @@ package liquibase.ext.opensearch.integration.spring;
 
 import liquibase.Scope;
 import liquibase.UpdateSummaryOutputEnum;
+import liquibase.changelog.ChangeLogParameters;
 import liquibase.command.CommandScope;
 import liquibase.command.core.UpdateCommandStep;
+import liquibase.command.core.helpers.DatabaseChangelogCommandStep;
 import liquibase.command.core.helpers.DbUrlConnectionArgumentsCommandStep;
 import liquibase.command.core.helpers.ShowSummaryArgument;
+import liquibase.database.ConnectionServiceFactory;
 import liquibase.database.DatabaseFactory;
 import liquibase.ext.opensearch.database.OpenSearchConnection;
 import liquibase.ext.opensearch.database.OpenSearchLiquibaseDatabase;
-import liquibase.integration.spring.SpringResourceAccessor;
+import liquibase.logging.Logger;
 import liquibase.ui.UIServiceEnum;
 import lombok.Getter;
+import org.opensearch.client.opensearch.OpenSearchClient;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.ResourceLoader;
+import org.springframework.stereotype.Component;
 
-import static liquibase.ext.opensearch.database.OpenSearchLiquibaseDatabase.OPENSEARCH_PREFIX;
-import static liquibase.ext.opensearch.database.OpenSearchLiquibaseDatabase.OPENSEARCH_URI_SEPARATOR;
-
+@Component
 public class SpringLiquibaseOpenSearch implements InitializingBean {
 
-    @Autowired
-    private ResourceLoader resourceLoader;
+    protected final Logger log = Scope.getCurrentScope().getLog(SpringLiquibaseOpenSearch.class);
 
-    @Autowired
-    private SpringLiquibaseOpenSearchProperties properties;
+    private final OpenSearchClient openSearchClient;
+
+    private final SpringLiquibaseOpenSearchProperties properties;
 
     @Getter
     protected UIServiceEnum uiService = UIServiceEnum.LOGGER;
 
+    public SpringLiquibaseOpenSearch(OpenSearchClient openSearchClient, SpringLiquibaseOpenSearchProperties properties) {
+        this.openSearchClient = openSearchClient;
+        this.properties = properties;
+    }
+
     @Override
     public void afterPropertiesSet() throws Exception {
-        // liquibase requires the prefix to identify this as an OpenSearch database.
-        final var url = OPENSEARCH_PREFIX + String.join(OPENSEARCH_URI_SEPARATOR, properties.uris());
+        if (!properties.enabled()) {
+            log.info("liquibase-opensearch did not run because it is disabled via configuration (opensearch.liquibase.enabled)");
+            return;
+        }
 
         Scope.child(Scope.Attr.ui.name(), this.uiService.getUiServiceClass().getDeclaredConstructor().newInstance(),
                 () -> {
-                    final var database = (OpenSearchLiquibaseDatabase) DatabaseFactory.getInstance().openDatabase(url, properties.username(), properties.password(), null, new SpringResourceAccessor(this.resourceLoader));
-                    final var connection = (OpenSearchConnection) database.getConnection();
+                    // we want to re-use the connection which spring-data-opensearch (or somebody else) already constructed
+                    // => do not rely on liquibase' standard mechanism of constructing a new connection, instead we force it to take our own.
+                    final var connection = new OpenSearchConnection(openSearchClient);
+                    ConnectionServiceFactory.getInstance().register(connection);
+                    final var database = new OpenSearchLiquibaseDatabase();
+                    database.setConnection(connection);
+                    DatabaseFactory.getInstance().register(database);
+                    final var changeLogParameters = new ChangeLogParameters(database);
+                    if (properties.parameters() != null) {
+                        for (var e : properties.parameters().entrySet()) {
+                            changeLogParameters.set(e.getKey(), e.getValue());
+                        }
+                    }
+
                     new CommandScope(UpdateCommandStep.COMMAND_NAME)
                             .addArgumentValue(ShowSummaryArgument.SHOW_SUMMARY_OUTPUT, UpdateSummaryOutputEnum.LOG)
                             .addArgumentValue(DbUrlConnectionArgumentsCommandStep.DATABASE_ARG, database)
-                            .addArgumentValue(UpdateCommandStep.CHANGELOG_FILE_ARG, properties.liquibase().changelogFile())
-                            .addArgumentValue(UpdateCommandStep.CONTEXTS_ARG, properties.liquibase().contexts())
-                            .addArgumentValue(UpdateCommandStep.LABEL_FILTER_ARG, properties.liquibase().labelFilterArgs())
+                            .addArgumentValue(UpdateCommandStep.CHANGELOG_FILE_ARG, properties.changelogFile())
+                            .addArgumentValue(DatabaseChangelogCommandStep.CHANGELOG_PARAMETERS, changeLogParameters)
+                            .addArgumentValue(UpdateCommandStep.CONTEXTS_ARG, properties.contexts())
+                            .addArgumentValue(UpdateCommandStep.LABEL_FILTER_ARG, properties.labelFilterArgs())
                             .execute();
                     connection.close();
                     database.close();

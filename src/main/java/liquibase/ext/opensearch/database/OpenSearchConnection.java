@@ -50,6 +50,11 @@ public class OpenSearchConnection extends AbstractNoSqlConnection {
     private List<URI> uris;
     private Properties connectionProperties;
 
+    public OpenSearchConnection(final OpenSearchClient openSearchClient) {
+        super();
+        this.openSearchClient = openSearchClient;
+    }
+
     @Override
     public boolean supports(final String url) {
         if (url == null) {
@@ -105,6 +110,16 @@ public class OpenSearchConnection extends AbstractNoSqlConnection {
 
     @Override
     public String getURL() {
+        if (this.uris == null) {
+            if (this.openSearchClient != null) {
+                try {
+                    return this.getOpenSearchClient().info().clusterName();
+                } catch (IOException e) {
+                    return "";
+                }
+            }
+            return "";
+        }
         return this.uris.stream()
                 .map(URI::toString)
                 .collect(Collectors.joining(OPENSEARCH_URI_SEPARATOR));
@@ -112,7 +127,7 @@ public class OpenSearchConnection extends AbstractNoSqlConnection {
 
     @Override
     public String getConnectionUserName() {
-        return this.connectionProperties.getProperty("username");
+        return this.connectionProperties != null ? this.connectionProperties.getProperty("username") : "";
     }
 
     @Override
