@@ -27,7 +27,7 @@ public abstract class AbstractOpenSearchLiquibaseIT {
     protected OpenSearchLiquibaseDatabase database;
     protected OpenSearchConnection connection;
 
-    protected static final String OPENSEARCH_DOCKER_IMAGE_NAME = "opensearchproject/opensearch:2.18.0";
+    public static final String OPENSEARCH_DOCKER_IMAGE_NAME = "opensearchproject/opensearch:2.18.0";
 
     @Container
     protected OpensearchContainer<?> container = new OpensearchContainer<>(DockerImageName.parse(OPENSEARCH_DOCKER_IMAGE_NAME));
