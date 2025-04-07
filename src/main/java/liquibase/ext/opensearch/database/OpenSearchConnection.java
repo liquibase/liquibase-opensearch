@@ -5,7 +5,6 @@ import liquibase.nosql.database.AbstractNoSqlConnection;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import lombok.SneakyThrows;
 import org.apache.hc.client5.http.auth.AuthScope;
 import org.apache.hc.client5.http.auth.UsernamePasswordCredentials;
 import org.apache.hc.client5.http.impl.auth.BasicCredentialsProvider;
@@ -13,6 +12,7 @@ import org.apache.hc.client5.http.impl.nio.PoolingAsyncClientConnectionManager;
 import org.apache.hc.client5.http.impl.nio.PoolingAsyncClientConnectionManagerBuilder;
 import org.apache.hc.client5.http.ssl.ClientTlsStrategyBuilder;
 import org.apache.hc.client5.http.ssl.NoopHostnameVerifier;
+import org.apache.hc.client5.http.ssl.TrustAllStrategy;
 import org.apache.hc.core5.http.HttpHost;
 import org.apache.hc.core5.http.nio.ssl.TlsStrategy;
 import org.apache.hc.core5.reactor.ssl.TlsDetails;
@@ -49,6 +49,12 @@ public class OpenSearchConnection extends AbstractNoSqlConnection {
 
     private List<URI> uris;
     private Properties connectionProperties;
+
+    public OpenSearchConnection(final OpenSearchClient openSearchClient) {
+        super();
+        this.openSearchClient = openSearchClient;
+        // TODO: construct uris from client if possible
+    }
 
     @Override
     public boolean supports(final String url) {
@@ -144,7 +150,7 @@ public class OpenSearchConnection extends AbstractNoSqlConnection {
                     try {
                         sslcontext = SSLContextBuilder
                                 .create()
-                                .loadTrustMaterial(null, (chains, authType) -> true)
+                                .loadTrustMaterial(null, new TrustAllStrategy())
                                 .build();
                     } catch (final NoSuchAlgorithmException | KeyManagementException | KeyStoreException e) {
                         throw new RuntimeException(e);
