@@ -1,0 +1,28 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1000
+      author: test
+      labels: httpRequestLabel
+      context: httpRequestContext
+      comment: httpRequestComment
+      changes:
+        - httpRequest:
+            method: PUT
+            path: /testindex
+            body: >
+              {
+                "mappings": {
+                  "properties": {
+                    "testfield": {
+                      "type": "text"
+                    }
+                  }
+                }
+              }
+        - httpRequest:
+            method: PUT
+            path: /testindex/_doc/testdoc
+            body: >
+              {
+                "testfield": "${test-value}"
+              }
