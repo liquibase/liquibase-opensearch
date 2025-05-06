@@ -23,6 +23,7 @@ import org.opensearch.client.opensearch.core.search.Hit;
 import org.opensearch.client.opensearch.indices.PutMappingRequest;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -114,7 +115,7 @@ public class OpenSearchHistoryService extends AbstractNoSqlHistoryService<OpenSe
                     .search(s -> s.index(this.getDatabaseChangeLogTableName()), RanChangeSet.class);
             return response.hits().hits().stream()
                     .map(Hit::source)
-                    .collect(Collectors.toList());
+                    .collect(Collectors.toCollection(ArrayList::new)); // do not use toList directly as it returns an immutable list!
         } catch (final IOException e) {
             throw new DatabaseException(e);
         }

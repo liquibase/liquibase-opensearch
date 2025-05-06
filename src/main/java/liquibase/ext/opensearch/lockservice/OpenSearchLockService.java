@@ -131,7 +131,7 @@ public class OpenSearchLockService extends AbstractNoSqlLockService<OpenSearchLi
                     .search(s -> s.index(this.getDatabaseChangeLogLockTableName()), DatabaseChangeLogLock.class);
             return response.hits().hits().stream()
                     .map(Hit::source)
-                    .collect(Collectors.toList());
+                    .toList();
         } catch (final IOException e) {
             throw new DatabaseException(e);
         }
