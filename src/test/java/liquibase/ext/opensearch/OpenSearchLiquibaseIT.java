@@ -2,10 +2,13 @@ package liquibase.ext.opensearch;
 
 import liquibase.command.CommandScope;
 import liquibase.command.core.ClearChecksumsCommandStep;
+import liquibase.command.core.TagCommandStep;
 import liquibase.command.core.helpers.DbUrlConnectionArgumentsCommandStep;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.Test;
 import org.opensearch.client.opensearch._types.query_dsl.Query;
+import org.opensearch.client.opensearch.core.CountRequest;
+import org.opensearch.client.opensearch.core.SearchRequest;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -83,6 +86,38 @@ public class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
 
         final var countAfterClear = this.getDocumentCount("databasechangelog", new Query.Builder().exists(e -> e.field("lastCheckSum")).build());
         assertThat(countAfterClear).isZero();
+    }
+
+    @SneakyThrows
+    @Test
+    public void itCanTagEntries() {
+        this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.multiple-steps.yaml");
+
+        final var countBeforeTag = this.getDocumentCount("databasechangelog", new Query.Builder().exists(e -> e.field("tag")).build());
+        assertThat(countBeforeTag).isZero();
+
+        new CommandScope(TagCommandStep.COMMAND_NAME)
+                .addArgumentValue(DbUrlConnectionArgumentsCommandStep.DATABASE_ARG, this.database)
+                .addArgumentValue(TagCommandStep.TAG_ARG, "testTag")
+                .execute();
+
+        // ensure that we have exactly one tag set
+        final var countAfterTag = this.getDocumentCount("databasechangelog", new Query.Builder()
+                .match(m -> m.field("tag").query(v -> v.stringValue("testTag"))).build());
+        assertThat(countAfterTag).isEqualTo(1);
+
+        // we know that ID=4001 is the last, so it must be this one which has been tagged
+        final var countAfterTagWithId4001 = this.getDocumentCount("databasechangelog", new Query.Builder()
+                .bool(
+                        b -> b.must(
+                                new Query.Builder().match(
+                                        m -> m.field("tag").query(v -> v.stringValue("testTag"))
+                                ).build(),
+                                new Query.Builder().ids(
+                                        i -> i.values("4001")
+                                ).build()
+                        )).build());
+        assertThat(countAfterTagWithId4001).isEqualTo(1);
     }
 
 }
