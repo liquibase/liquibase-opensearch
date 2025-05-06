@@ -5,7 +5,6 @@ import liquibase.nosql.database.AbstractNoSqlConnection;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import lombok.SneakyThrows;
 import org.apache.hc.client5.http.auth.AuthScope;
 import org.apache.hc.client5.http.auth.UsernamePasswordCredentials;
 import org.apache.hc.client5.http.impl.auth.BasicCredentialsProvider;
@@ -19,7 +18,7 @@ import org.apache.hc.core5.reactor.ssl.TlsDetails;
 import org.apache.hc.core5.ssl.SSLContextBuilder;
 import org.opensearch.client.json.jackson.JacksonJsonpMapper;
 import org.opensearch.client.opensearch.OpenSearchClient;
-import org.opensearch.client.opensearch._types.OpenSearchVersionInfo;
+import org.opensearch.client.opensearch.core.InfoResponse;
 import org.opensearch.client.transport.httpclient5.ApacheHttpClient5TransportBuilder;
 
 import javax.net.ssl.SSLContext;
@@ -45,7 +44,7 @@ import static liquibase.ext.opensearch.database.OpenSearchLiquibaseDatabase.OPEN
 public class OpenSearchConnection extends AbstractNoSqlConnection {
 
     private OpenSearchClient openSearchClient;
-    private Optional<OpenSearchVersionInfo> openSearchVersion = Optional.empty();
+    private Optional<InfoResponse> openSearchInfo = Optional.empty();
 
     private List<URI> uris;
     private Properties connectionProperties;
@@ -105,6 +104,16 @@ public class OpenSearchConnection extends AbstractNoSqlConnection {
 
     @Override
     public String getURL() {
+        // if we have a connection we should return the name of the cluster
+        // this makes more sense than a list of URIs (which all point to the same cluster anyway).
+        if (this.openSearchClient != null) {
+            try {
+                return this.getOpenSearchInfo().clusterName();
+            } catch (final Exception e) {
+                // do nothing, continue with alternative
+            }
+        }
+
         return this.uris.stream()
                 .map(URI::toString)
                 .collect(Collectors.joining(OPENSEARCH_URI_SEPARATOR));
@@ -173,7 +182,7 @@ public class OpenSearchConnection extends AbstractNoSqlConnection {
 
     @Override
     public String getDatabaseProductVersion() throws DatabaseException {
-        return this.getOpenSearchVersion().number();
+        return this.getOpenSearchInfo().version().number();
     }
 
     @Override
@@ -188,15 +197,15 @@ public class OpenSearchConnection extends AbstractNoSqlConnection {
         return Integer.parseInt(version.split("\\.")[1]);
     }
 
-    private OpenSearchVersionInfo getOpenSearchVersion() throws DatabaseException {
-        if (this.openSearchVersion.isEmpty()) {
+    private InfoResponse getOpenSearchInfo() throws DatabaseException {
+        if (this.openSearchInfo.isEmpty()) {
             try {
-                this.openSearchVersion = Optional.of(this.openSearchClient.info().version());
+                this.openSearchInfo = Optional.of(this.openSearchClient.info());
             } catch (IOException e) {
                 throw new DatabaseException(e);
             }
         }
-        return this.openSearchVersion.get();
+        return this.openSearchInfo.get();
     }
 
 }

@@ -2,9 +2,7 @@ package liquibase.ext.opensearch;
 
 import liquibase.command.CommandScope;
 import liquibase.command.core.ClearChecksumsCommandStep;
-import liquibase.command.core.UpdateCommandStep;
 import liquibase.command.core.helpers.DbUrlConnectionArgumentsCommandStep;
-import liquibase.command.core.helpers.DbUrlConnectionCommandStep;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.Test;
 import org.opensearch.client.opensearch._types.query_dsl.Query;
@@ -21,6 +19,11 @@ public class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
     public void openSearchIsRunning() {
         assertThat(this.getOpenSearchClient().info().clusterName()).isEqualTo("docker-cluster");
         assertThat(this.database.getDatabaseMajorVersion()).isEqualTo(2);
+    }
+
+    @Test
+    public void connectionReturnsClusterNameAsUrl() {
+        assertThat(this.connection.getURL()).isEqualTo("docker-cluster");
     }
 
     @SneakyThrows
