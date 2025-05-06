@@ -153,7 +153,6 @@ public class OpenSearchConnection extends AbstractNoSqlConnection {
         final var transport = ApacheHttpClient5TransportBuilder
                 .builder(hostsArray)
                 .setHttpClientConfigCallback(httpClientBuilder -> {
-                    // TODO: support other credential providers
                     final var username = this.connectionProperties.flatMap(p -> Optional.ofNullable(p.getProperty("user")));
                     final var password = this.connectionProperties.flatMap(p -> Optional.ofNullable(p.getProperty("password")));
 
