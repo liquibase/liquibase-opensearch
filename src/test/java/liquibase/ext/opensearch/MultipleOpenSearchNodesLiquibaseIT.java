@@ -17,10 +17,10 @@ class MultipleOpenSearchNodesLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
         // if we launch two testcontainers they can't see each other and thus don't form a cluster => just use the same URL twice to show that it's being accepted
         // note: don't use the constants here to detect if we ever change them (to make sure that we actively decide on doing a breaking change rather than making it by mistake).
         final String url = "opensearch:" + this.container.getHttpHostAddress() + "," + this.container.getHttpHostAddress();
-        final String username = container.getUsername();
-        final String password = container.getPassword();
-        database = (OpenSearchLiquibaseDatabase) DatabaseFactory.getInstance().openDatabase(url, username, password, null, null);
-        connection = (OpenSearchConnection) this.database.getConnection();
+        final String username = this.container.getUsername();
+        final String password = this.container.getPassword();
+        this.database = (OpenSearchLiquibaseDatabase) DatabaseFactory.getInstance().openDatabase(url, username, password, null, null);
+        this.connection = (OpenSearchConnection) this.database.getConnection();
     }
 
     @SneakyThrows
