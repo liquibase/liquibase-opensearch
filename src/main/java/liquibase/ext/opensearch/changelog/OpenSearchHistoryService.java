@@ -114,7 +114,7 @@ public class OpenSearchHistoryService extends AbstractNoSqlHistoryService<OpenSe
                     .search(s -> s.index(this.getDatabaseChangeLogTableName()), RanChangeSet.class);
             return response.hits().hits().stream()
                     .map(Hit::source)
-                    .collect(Collectors.toList());
+                    .toList();
         } catch (final IOException e) {
             throw new DatabaseException(e);
         }
