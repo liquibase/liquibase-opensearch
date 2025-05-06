@@ -1,10 +1,10 @@
 package liquibase.ext.opensearch.change;
 
 import liquibase.change.AbstractChange;
-import liquibase.change.ChangeMetaData;
 import liquibase.change.DatabaseChange;
 import liquibase.database.Database;
 import liquibase.ext.opensearch.statement.HttpRequestStatement;
+import liquibase.servicelocator.PrioritizedService;
 import liquibase.statement.SqlStatement;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -14,7 +14,7 @@ import java.util.Optional;
 
 @DatabaseChange(name = "httpRequest",
         description = "Execute an arbitrary HTTP request with the provided payload",
-        priority = ChangeMetaData.PRIORITY_DATABASE)
+        priority = PrioritizedService.PRIORITY_DATABASE)
 @NoArgsConstructor
 @Getter
 @Setter
