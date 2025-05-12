@@ -94,6 +94,10 @@ void main() {
 
 `liquibase-opensearch` is currently compatible with OpenSearch 2.x and 3.x.
 
+## Versioning
+
+This project adheres to [Semantic Versioning].
+
 ## License
 This project is licensed under the Apache License Version 2.0 - see the [LICENSE] file for details.
 
@@ -102,4 +106,5 @@ This project is licensed under the Apache License Version 2.0 - see the [LICENSE
 [`liquibase-opensearch-spring-boot-starter`]: https://github.com/liquibase/liquibase-opensearch-springboot-starter/
 [custom-client]: https://docs.opensearch.org/docs/latest/clients/java/
 [CustomOpenSearchClientLiquibaseIT]: src/test/java/liquibase/ext/opensearch/CustomOpenSearchClientLiquibaseIT.java
+[Semantic Versioning]: https://semver.org/spec/v2.0.0.html
 [LICENSE]: LICENSE
