@@ -19,7 +19,6 @@ class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
     @Test
     void openSearchIsRunning() {
         assertThat(this.getOpenSearchClient().info().clusterName()).isEqualTo("docker-cluster");
-        assertThat(this.database.getDatabaseMajorVersion()).isEqualTo(2);
     }
 
     @Test

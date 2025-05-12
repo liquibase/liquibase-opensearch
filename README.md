@@ -90,6 +90,10 @@ void main() {
 }
 ```
 
+## OpenSearch Compatibility
+
+`liquibase-opensearch` is currently compatible with OpenSearch 2.x and 3.x.
+
 ## License
 This project is licensed under the Apache License Version 2.0 - see the [LICENSE] file for details.
 

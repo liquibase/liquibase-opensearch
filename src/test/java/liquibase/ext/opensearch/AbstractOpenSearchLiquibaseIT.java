@@ -24,17 +24,27 @@ public abstract class AbstractOpenSearchLiquibaseIT {
     protected OpenSearchLiquibaseDatabase database;
     protected OpenSearchConnection connection;
 
-    protected static final String OPENSEARCH_DOCKER_IMAGE_NAME = "opensearchproject/opensearch:2.19.2";
+    protected static final String OPENSEARCH_2_DOCKER_IMAGE_NAME = "opensearchproject/opensearch:2.19.2";
+    protected static final String OPENSEARCH_3_DOCKER_IMAGE_NAME = "opensearchproject/opensearch:3.0.0";
 
     @Container
     protected OpensearchContainer<?> container = newContainer();
+
+    /***
+     * @return whether OpenSearch V2 or V3 should be used for the tests. Defaults to using OpenSearch 3.x.
+     */
+    protected String openSearchImageName() {
+        return OPENSEARCH_3_DOCKER_IMAGE_NAME;
+    }
 
     /**
      * This allows tests to define alternative containers, e.g. enabling security.
      * @return the testcontainer to be used for this test.
      */
     protected OpensearchContainer<?> newContainer() {
-        return new OpensearchContainer<>(DockerImageName.parse(OPENSEARCH_DOCKER_IMAGE_NAME));
+        return new OpensearchContainer<>(DockerImageName.parse(
+                this.openSearchImageName()
+        ));
     }
 
     @SneakyThrows
