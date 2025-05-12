@@ -75,14 +75,14 @@ class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
         // run at least one change set
         this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.yaml");
 
-        final var countBeforeClear = this.getDocumentCount("databasechangelog", new Query.Builder().exists(e -> e.field("lastCheckSum")).build());
+        final var countBeforeClear = this.getDocumentCount("databasechangelog", Query.of(q -> q.exists(e -> e.field("lastCheckSum"))));
         assertThat(countBeforeClear).isNotZero();
 
         new CommandScope(ClearChecksumsCommandStep.COMMAND_NAME)
                 .addArgumentValue(DbUrlConnectionArgumentsCommandStep.DATABASE_ARG, this.database)
                 .execute();
 
-        final var countAfterClear = this.getDocumentCount("databasechangelog", new Query.Builder().exists(e -> e.field("lastCheckSum")).build());
+        final var countAfterClear = this.getDocumentCount("databasechangelog", Query.of(q -> q.exists(e -> e.field("lastCheckSum"))));
         assertThat(countAfterClear).isZero();
     }
 
@@ -91,7 +91,7 @@ class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
     void itCanTagEntries() {
         this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.multiple-steps.yaml");
 
-        final var countBeforeTag = this.getDocumentCount("databasechangelog", new Query.Builder().exists(e -> e.field("tag")).build());
+        final var countBeforeTag = this.getDocumentCount("databasechangelog", Query.of(q -> q.exists(e -> e.field("tag"))));
         assertThat(countBeforeTag).isZero();
 
         new CommandScope(TagCommandStep.COMMAND_NAME)
@@ -100,21 +100,24 @@ class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
                 .execute();
 
         // ensure that we have exactly one tag set
-        final var countAfterTag = this.getDocumentCount("databasechangelog", new Query.Builder()
-                .match(m -> m.field("tag").query(v -> v.stringValue("testTag"))).build());
+        final var countAfterTag = this.getDocumentCount("databasechangelog", Query.of(q ->
+                q.match(m -> m.field("tag").query(v -> v.stringValue("testTag")))));
         assertThat(countAfterTag).isEqualTo(1);
 
         // we know that ID=4001 is the last, so it must be this one which has been tagged
-        final var countAfterTagWithId4001 = this.getDocumentCount("databasechangelog", new Query.Builder()
-                .bool(
-                        b -> b.must(
-                                new Query.Builder().match(
-                                        m -> m.field("tag").query(v -> v.stringValue("testTag"))
-                                ).build(),
-                                new Query.Builder().ids(
-                                        i -> i.values("4001")
-                                ).build()
-                        )).build());
+        final var countAfterTagWithId4001 = this.getDocumentCount("databasechangelog", Query.of(q ->
+                q.bool(b ->
+                    b.must(
+                        m -> m.match(
+                            ma -> ma.field("tag").query(v -> v.stringValue("testTag"))
+                        )
+                    )
+                    .must(
+                        m -> m.ids(
+                            i -> i.values("4001")
+                        )
+                    )
+                )));
         assertThat(countAfterTagWithId4001).isEqualTo(1);
     }
 
