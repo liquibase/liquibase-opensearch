@@ -24,7 +24,7 @@ public abstract class AbstractOpenSearchLiquibaseIT {
     protected OpenSearchLiquibaseDatabase database;
     protected OpenSearchConnection connection;
 
-    protected static final String OPENSEARCH_DOCKER_IMAGE_NAME = "opensearchproject/opensearch:2.18.0";
+    protected static final String OPENSEARCH_DOCKER_IMAGE_NAME = "opensearchproject/opensearch:2.19.2";
 
     @Container
     protected OpensearchContainer<?> container = newContainer();
