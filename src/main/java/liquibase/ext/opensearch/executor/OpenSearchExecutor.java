@@ -47,11 +47,6 @@ public class OpenSearchExecutor extends AbstractExecutor {
     public static final String EXECUTOR_NAME = "jdbc"; // needed because of AbstractJdbcDatabase#execute
     private final Logger log = Scope.getCurrentScope().getLog(getClass());
 
-    @Override
-    public void setDatabase(final Database database) {
-        super.setDatabase(database);
-    }
-
     private OpenSearchLiquibaseDatabase getDatabase() {
         return (OpenSearchLiquibaseDatabase)this.database;
     }
@@ -129,9 +124,9 @@ public class OpenSearchExecutor extends AbstractExecutor {
 
     @Override
     public void execute(final SqlStatement sql, final List<SqlVisitor> sqlVisitors) throws DatabaseException {
-        if (sql instanceof OpenSearchExecuteStatement) {
+        if (sql instanceof OpenSearchExecuteStatement statement) {
             try {
-                ((OpenSearchExecuteStatement) sql).execute(getDatabase());
+                statement.execute(getDatabase());
             } catch (final OpenSearchClientException e) {
                 try (var r = e.response()) {
                     throw new DatabaseException("Could not execute: %s".formatted(r.getBody().map(Body::bodyAsString).orElse("")), e);
