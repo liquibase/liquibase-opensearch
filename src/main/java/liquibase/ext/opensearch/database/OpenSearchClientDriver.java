@@ -1,7 +1,7 @@
 package liquibase.ext.opensearch.database;
 
 import liquibase.Scope;
-import liquibase.util.StringUtil;
+import org.apache.commons.lang3.StringUtils;
 
 import java.sql.Connection;
 import java.sql.Driver;
@@ -20,7 +20,7 @@ public class OpenSearchClientDriver implements Driver {
     }
 
     public static boolean isOpenSearchURL(final String url) {
-        return StringUtil.trimToEmpty(url).startsWith(OPENSEARCH_PREFIX);
+        return StringUtils.trimToEmpty(url).startsWith(OPENSEARCH_PREFIX);
     }
 
     @Override

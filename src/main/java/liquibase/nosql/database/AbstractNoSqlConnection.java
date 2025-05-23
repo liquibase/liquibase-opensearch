@@ -42,15 +42,15 @@ public abstract class AbstractNoSqlConnection implements DatabaseConnection {
 
     @Override
     public boolean getAutoCommit() throws DatabaseException {
-        // TODO: this is not applicable (OpenSearch doesn't support transactions) but this gets called from
-        //  `#setConnection`, thus we can't just throw an exception.
+        // this is not applicable (OpenSearch doesn't support transactions) but this gets called from
+        // `#setConnection`, thus we can't just throw an exception.
         return false;
     }
 
     @Override
     public void setAutoCommit(boolean autoCommit) throws DatabaseException {
-        // TODO: this is not applicable (OpenSearch doesn't support transactions) but this gets called from
-        //  `#setConnection`, thus we can't just throw an exception.
+        // this is not applicable (OpenSearch doesn't support transactions) but this gets called from
+        // `#setConnection`, thus we can't just throw an exception.
     }
 
     @Override
