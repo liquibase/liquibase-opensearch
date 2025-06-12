@@ -20,7 +20,7 @@ class OpenSearchHistoryServiceTest {
      * as well as this test.
      */
     @Test
-    public void ensureThatAllRanChangeSetFieldsAreCovered() {
+    void ensureThatAllRanChangeSetFieldsAreCovered() {
         final var allFields = Arrays.stream(RanChangeSet.class.getDeclaredFields())
                 .filter(f -> !Modifier.isStatic(f.getModifiers()))
                 .map(Field::getName);
@@ -50,7 +50,7 @@ class OpenSearchHistoryServiceTest {
      * as well as this test.
      */
     @Test
-    public void ensureThatAllCheckSumFieldsAreCovered() {
+    void ensureThatAllCheckSumFieldsAreCovered() {
         final var allFields = Arrays.stream(CheckSum.class.getDeclaredFields())
                 .filter(f -> !Modifier.isStatic(f.getModifiers()))
                 .map(Field::getName);
@@ -67,7 +67,7 @@ class OpenSearchHistoryServiceTest {
      * as well as this test.
      */
     @Test
-    public void ensureThatAllContextExpressionFieldsAreCovered() {
+    void ensureThatAllContextExpressionFieldsAreCovered() {
         final var allFields = Arrays.stream(ContextExpression.class.getDeclaredFields())
                 .filter(f -> !Modifier.isStatic(f.getModifiers()))
                 .map(Field::getName);

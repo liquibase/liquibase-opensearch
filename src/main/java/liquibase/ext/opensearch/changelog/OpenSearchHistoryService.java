@@ -13,15 +13,17 @@ import liquibase.logging.Logger;
 import liquibase.nosql.changelog.AbstractNoSqlHistoryService;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import org.opensearch.client.json.JsonData;
 import org.opensearch.client.opensearch.OpenSearchClient;
 import org.opensearch.client.opensearch._types.FieldValue;
 import org.opensearch.client.opensearch._types.Refresh;
-import org.opensearch.client.opensearch._types.mapping.*;
+import org.opensearch.client.opensearch._types.SortOrder;
 import org.opensearch.client.opensearch.core.SearchRequest;
 import org.opensearch.client.opensearch.core.search.Hit;
 import org.opensearch.client.opensearch.indices.PutMappingRequest;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -70,10 +72,10 @@ public class OpenSearchHistoryService extends AbstractNoSqlHistoryService<OpenSe
                 .properties("storedChangeLog", p -> p.keyword(k -> k))
                 .properties("author", p -> p.text(t -> t))
                 .properties("lastCheckSum", p -> p.object(o -> {
-                            o.properties("version", p2 -> p2.integer(i -> i));
-                            o.properties("storedCheckSum", p2 -> p2.keyword(k -> k));
-                            return o;
-                        }))
+                    o.properties("version", p2 -> p2.integer(i -> i));
+                    o.properties("storedCheckSum", p2 -> p2.keyword(k -> k));
+                    return o;
+                }))
                 .properties("dateExecuted", p -> p.date(d -> d))
                 .properties("tag", p -> p.text(t -> t))
                 .properties("execType", p -> p.keyword(k -> k))
@@ -113,7 +115,7 @@ public class OpenSearchHistoryService extends AbstractNoSqlHistoryService<OpenSe
                     .search(s -> s.index(this.getDatabaseChangeLogTableName()), RanChangeSet.class);
             return response.hits().hits().stream()
                     .map(Hit::source)
-                    .collect(Collectors.toList());
+                    .collect(Collectors.toCollection(ArrayList::new)); // do not use toList directly as it returns an immutable list!
         } catch (final IOException e) {
             throw new DatabaseException(e);
         }
@@ -189,7 +191,39 @@ public class OpenSearchHistoryService extends AbstractNoSqlHistoryService<OpenSe
 
     @Override
     protected void tagLast(final String tagString) throws DatabaseException {
-        // TODO
+        try {
+            // safety:
+            // there's no way to search for the document and update it in the same step in OpenSearch.
+            // also, there are no transactions. however we have the lock from liquibase, thus we can be confident
+            // that nobody will modify the data between our first read and subsequent update.
+
+            final var response = this.getOpenSearchClient().search(
+                    s -> s
+                            .index(this.getDatabaseChangeLogTableName())
+                            .sort(so -> so.field(f -> f.field("dateExecuted").order(SortOrder.Desc)))
+                            .size(1),
+                    RanChangeSet.class
+            );
+
+            if (response.hits().total().value() == 0) {
+                getLogger().warning("tried to add a tag but found no entries in the changelog table!");
+                return;
+            }
+
+            final var entryToTag = response.hits().hits().get(0).id();
+
+            this.getOpenSearchClient().updateByQuery(
+                    u -> u
+                            .index(this.getDatabaseChangeLogTableName())
+                            .query(q -> q.ids(i -> i.values(entryToTag)))
+                            .script(s -> s.inline(i -> i
+                                    .lang("painless")
+                                    .source("ctx._source.tag = params.newTag")
+                                    .params("newTag", JsonData.of(tagString))))
+            );
+        } catch (final IOException e) {
+            throw new DatabaseException(e);
+        }
     }
 
     @Override

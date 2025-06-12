@@ -47,8 +47,6 @@ public abstract class AbstractNoSqlLockService<D extends AbstractNoSqlDatabase> 
 
     private boolean hasChangeLogLock;
 
-    private static final ResourceBundle i18nBundle = ResourceBundle.getBundle("liquibase/i18n/liquibase-opensearch");
-
     private Long changeLogLockPollRate;
 
     private Long changeLogLockRecheckTime;

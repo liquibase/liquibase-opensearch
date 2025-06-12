@@ -12,6 +12,11 @@ public class OpenSearchLiquibaseDatabase extends AbstractNoSqlDatabase {
     public static final String OPENSEARCH_PREFIX = PRODUCT_SHORT_NAME + ":";
     public static final String OPENSEARCH_URI_SEPARATOR = ",";
 
+    public OpenSearchLiquibaseDatabase(final OpenSearchConnection openSearchConnection) {
+        super();
+        this.setConnection(openSearchConnection);
+    }
+
     @Override
     public void dropDatabaseObjects(final CatalogAndSchema schemaToDrop) throws LiquibaseException {
         throw new UnsupportedOperationException();

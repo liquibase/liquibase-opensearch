@@ -14,12 +14,9 @@ import org.opensearch.client.opensearch._types.query_dsl.Query;
 import org.opensearch.client.opensearch.core.CountRequest;
 import org.opensearch.client.opensearch.indices.ExistsRequest;
 import org.opensearch.testcontainers.OpensearchContainer;
-import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
-
-import java.time.Duration;
 
 @TestInstance(TestInstance.Lifecycle.PER_METHOD)
 @Testcontainers
@@ -27,11 +24,28 @@ public abstract class AbstractOpenSearchLiquibaseIT {
     protected OpenSearchLiquibaseDatabase database;
     protected OpenSearchConnection connection;
 
-    protected static final String OPENSEARCH_DOCKER_IMAGE_NAME = "opensearchproject/opensearch:2.18.0";
+    protected static final String OPENSEARCH_2_DOCKER_IMAGE_NAME = "opensearchproject/opensearch:2.19.2";
+    protected static final String OPENSEARCH_3_DOCKER_IMAGE_NAME = "opensearchproject/opensearch:3.0.0";
 
     @Container
-    protected OpensearchContainer<?> container = new OpensearchContainer<>(DockerImageName.parse(OPENSEARCH_DOCKER_IMAGE_NAME));
+    protected OpensearchContainer<?> container = newContainer();
 
+    /***
+     * @return whether OpenSearch V2 or V3 should be used for the tests. Defaults to using OpenSearch 3.x.
+     */
+    protected String openSearchImageName() {
+        return OPENSEARCH_3_DOCKER_IMAGE_NAME;
+    }
+
+    /**
+     * This allows tests to define alternative containers, e.g. enabling security.
+     * @return the testcontainer to be used for this test.
+     */
+    protected OpensearchContainer<?> newContainer() {
+        return new OpensearchContainer<>(DockerImageName.parse(
+                this.openSearchImageName()
+        ));
+    }
 
     @SneakyThrows
     @BeforeEach

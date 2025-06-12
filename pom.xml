@@ -12,7 +12,7 @@
     <groupId>org.liquibase.ext</groupId>
     <artifactId>liquibase-opensearch</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>Liquibase Opensearch Extension</name>
+    <name>Liquibase OpenSearch Extension</name>
     <packaging>jar</packaging>
 
     <description>Liquibase extension to manage changesets for OpenSearch.</description>
