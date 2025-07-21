@@ -98,6 +98,9 @@ void main() {
 
 This project adheres to [Semantic Versioning].
 
+## Changelog
+For the changelog please see the dedicated [CHANGELOG.md](CHANGELOG.md).
+
 ## License
 This project is licensed under the Apache License Version 2.0 - see the [LICENSE] file for details.
 
