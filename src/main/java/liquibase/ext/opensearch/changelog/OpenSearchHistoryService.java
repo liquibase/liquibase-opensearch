@@ -15,8 +15,10 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.opensearch.client.json.JsonData;
 import org.opensearch.client.opensearch.OpenSearchClient;
+import org.opensearch.client.opensearch._types.BuiltinScriptLanguage;
 import org.opensearch.client.opensearch._types.FieldValue;
 import org.opensearch.client.opensearch._types.Refresh;
+import org.opensearch.client.opensearch._types.ScriptLanguage;
 import org.opensearch.client.opensearch._types.SortOrder;
 import org.opensearch.client.opensearch.core.SearchRequest;
 import org.opensearch.client.opensearch.core.search.Hit;
@@ -130,7 +132,8 @@ public class OpenSearchHistoryService extends AbstractNoSqlHistoryService<OpenSe
                 .build();
         try {
             final var response = this.getOpenSearchClient().search(request, RanChangeSet.class);
-            return (int) response.aggregations().get(aggregationName).max().value();
+            final var max = Optional.ofNullable(response.aggregations().get(aggregationName).max().value());
+            return max.map(Double::intValue).orElse(0);
         } catch (final IOException e) {
             throw new DatabaseException(e);
         }
@@ -169,7 +172,7 @@ public class OpenSearchHistoryService extends AbstractNoSqlHistoryService<OpenSe
             this.getOpenSearchClient()
                     .updateByQuery(r -> r.index(this.getDatabaseChangeLogTableName())
                             .script(s -> s.inline(i -> i.source("ctx._source.lastCheckSum = null")
-                                    .lang("painless"))));
+                                    .lang(ScriptLanguage.builder().builtin(BuiltinScriptLanguage.Painless).build()))));
         } catch (IOException e) {
             throw new DatabaseException(e);
         }
@@ -217,7 +220,7 @@ public class OpenSearchHistoryService extends AbstractNoSqlHistoryService<OpenSe
                             .index(this.getDatabaseChangeLogTableName())
                             .query(q -> q.ids(i -> i.values(entryToTag)))
                             .script(s -> s.inline(i -> i
-                                    .lang("painless")
+                                    .lang(ScriptLanguage.builder().builtin(BuiltinScriptLanguage.Painless).build())
                                     .source("ctx._source.tag = params.newTag")
                                     .params("newTag", JsonData.of(tagString))))
             );
