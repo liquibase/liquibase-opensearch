@@ -27,7 +27,9 @@ jobs:
     uses: liquibase/build-logic/.github/workflows/os-extension-test.yml@main
     secrets: inherit
     with:
-      java: "[ 17, 21 ]"
+      # we support JDK 17, however opensearch-testcontainers used in the tests only supports JDK 21
+      javaBuildVersion: '17'
+      java: '21'
       runIntegrationTests: true
 
   dependabot:

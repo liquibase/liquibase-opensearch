@@ -22,7 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.opensearch.client.json.jackson.JacksonJsonpMapper;
 import org.opensearch.client.opensearch.OpenSearchClient;
 import org.opensearch.client.transport.httpclient5.ApacheHttpClient5TransportBuilder;
-import org.opensearch.testcontainers.OpensearchContainer;
+import org.opensearch.testcontainers.OpenSearchContainer;
 
 import javax.net.ssl.SSLContext;
 import java.security.KeyManagementException;
@@ -35,7 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class CustomOpenSearchClientLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
 
     @Override
-    protected OpensearchContainer<?> newContainer() {
+    protected OpenSearchContainer<?> newContainer() {
         return super.newContainer().withSecurityEnabled();
     }
 
