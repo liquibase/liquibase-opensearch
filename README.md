@@ -6,6 +6,9 @@ This [Liquibase] extension supports managing migrations for [OpenSearch].
 > If you wish to use Spring Boot you should be using [`liquibase-opensearch-spring-boot-starter`] instead of using this directly.
 
 ## Usage
+
+To use this in your java project, add a dependency to `org.liquibase.ext:liquibase-opensearch`.
+
 This supports a single liquibase change type called `httpRequest` which executes the given request against OpenSearch.
 A simple example changelog might look like this:
 ```yaml
