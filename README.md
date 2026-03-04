@@ -7,6 +7,16 @@ This [Liquibase] extension supports managing migrations for [OpenSearch].
 
 ## Usage
 
+### With the Liquibase CLI
+
+To use this with the [Liquibase CLI] follow these steps:
+1. Download & install the Liquibase CLI
+2. Download the fat jar of `liquibase-opensearch`
+3. Put the fat jar in the `lib` folder of the CLI
+4. Use the CLI and prefix the URL of OpenSearch with `opensearch:` (e.g. `opensearch:http://localhost:9200`)
+
+### In a Java Project
+
 To use this in your java project, add a dependency to `org.liquibase.ext:liquibase-opensearch`.
 
 This supports a single liquibase change type called `httpRequest` which executes the given request against OpenSearch.
@@ -40,9 +50,9 @@ databaseChangeLog:
               }
 ```
 
-### OpenSearch Connection
+#### OpenSearch Connection
 
-#### New Connection From Liquibase
+##### New Connection From Liquibase
 
 The standard liquibase integration supports only connections with either HTTP or HTTPS with valid TLS certificates and
 either no authentication or basic authentication (username/password). To use this you have to prepend the URL(s) of
@@ -70,7 +80,7 @@ This also supports multiple URLs for OpenSearch, in which case you can specify t
 that they all must be for the same OpenSearch cluster, otherwise you'll have undefined behaviour!
 Example: `opensearch:http://localhost:9200,http://localhost:9201,http://localhost:9202`
 
-#### Custom `OpenSearchClient`
+##### Custom `OpenSearchClient`
 
 If you wish to use any other form of authentication
 or have special requirements for the connection (e.g. not validate the TLS certificates) you have to [construct your own
@@ -110,6 +120,7 @@ This project is licensed under the Apache License Version 2.0 - see the [LICENSE
 [Liquibase]: https://www.liquibase.com/
 [OpenSearch]: https://opensearch.org/
 [`liquibase-opensearch-spring-boot-starter`]: https://github.com/liquibase/liquibase-opensearch-springboot-starter/
+[Liquibase CLI]: https://docs.liquibase.com/secure/reference-guide-5-1/parameters/working-with-command-parameters
 [custom-client]: https://docs.opensearch.org/docs/latest/clients/java/
 [CustomOpenSearchClientLiquibaseIT]: src/test/java/liquibase/ext/opensearch/CustomOpenSearchClientLiquibaseIT.java
 [Semantic Versioning]: https://semver.org/spec/v2.0.0.html
