@@ -30,6 +30,48 @@ jobs:
       java: "[ 17, 21 ]"
       runIntegrationTests: true
 
+  test-cli:
+    needs: authorize
+    runs-on: ubuntu-latest
+    services:
+      opensearch:
+        image: opensearchproject/opensearch:3
+        env:
+          DISABLE_SECURITY_PLUGIN: true
+          "discovery.type": single-node
+        ports:
+          - 9200:9200
+          - 9600:9600
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Install Liquibase CLI
+        run: |
+          set -euo pipefail
+          curl -LO https://github.com/liquibase/liquibase/releases/download/v4.33.0/liquibase-4.33.0.tar.gz
+          mkdir liquibase
+          tar -xzf liquibase-4.33.0.tar.gz -C liquibase
+
+      - name: Build fat jar
+        run: ./mvnw clean package
+
+      - name: Install liquibase-opensearch in CLI
+        run: cp target/liquibase-opensearch-*-fat.jar liquibase/lib/
+
+      - name: Run Liquibase CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          liquibase/liquibase update --changelogFile src/test/resources/liquibase/ext/changelog.httprequest.yaml --url opensearch:http://localhost:9200 | tee cli-output.txt
+          # make sure that our test executed the migration
+          grep 'Run:.*1' cli-output.txt
+
   dependabot:
     needs: build-test
     uses: liquibase/build-logic/.github/workflows/dependabot-automerge.yml@main
