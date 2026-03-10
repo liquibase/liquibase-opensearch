@@ -187,19 +187,20 @@ public class OpenSearchConnection extends AbstractNoSqlConnection {
 
     @Override
     public String getDatabaseProductVersion() throws DatabaseException {
-        return this.getOpenSearchInfo().version().number();
+        final var info = this.getOpenSearchInfo();
+        return toEffectiveProductVersion(info.version().number(), info.version().minimumIndexCompatibilityVersion());
     }
 
     @Override
     public int getDatabaseMajorVersion() throws DatabaseException {
         final var version = this.getDatabaseProductVersion();
-        return Integer.parseInt(version.split("\\.")[0]);
+        return parseVersionPart(version, 0);
     }
 
     @Override
     public int getDatabaseMinorVersion() throws DatabaseException {
         final var version = this.getDatabaseProductVersion();
-        return Integer.parseInt(version.split("\\.")[1]);
+        return parseVersionPart(version, 1);
     }
 
     private InfoResponse getOpenSearchInfo() throws DatabaseException {
@@ -211,6 +212,51 @@ public class OpenSearchConnection extends AbstractNoSqlConnection {
             }
         }
         return this.openSearchInfo.get();
+    }
+
+    static String toEffectiveProductVersion(final String reportedVersion, final String minimumIndexCompatibilityVersion) {
+        if (!isCompatibilityModeVersion(reportedVersion)) {
+            return reportedVersion;
+        }
+
+        final var minIndexMajor = parseVersionPartSafely(minimumIndexCompatibilityVersion, 0);
+        if (minIndexMajor.isEmpty()) {
+            return reportedVersion;
+        }
+
+        // OpenSearch compatibility mode reports 7.10.x at "/".
+        // Derive a stable OpenSearch major version from minimum index compatibility.
+        final var effectiveMajor = minIndexMajor.get() + 1;
+        return effectiveMajor + ".0.0";
+    }
+
+    private static boolean isCompatibilityModeVersion(final String reportedVersion) {
+        return reportedVersion != null && reportedVersion.startsWith("7.10.");
+    }
+
+    static int parseVersionPart(final String version, final int index) throws DatabaseException {
+        final var parsed = parseVersionPartSafely(version, index);
+        if (parsed.isPresent()) {
+            return parsed.get();
+        }
+        throw new DatabaseException("Invalid OpenSearch version format: " + version);
+    }
+
+    private static Optional<Integer> parseVersionPartSafely(final String version, final int index) {
+        if (version == null) {
+            return Optional.empty();
+        }
+
+        final var parts = version.split("\\.");
+        if (parts.length <= index) {
+            return Optional.empty();
+        }
+
+        try {
+            return Optional.of(Integer.parseInt(parts[index]));
+        } catch (NumberFormatException e) {
+            return Optional.empty();
+        }
     }
 
 }
