@@ -4,6 +4,8 @@ import liquibase.command.CommandScope;
 import liquibase.command.core.ClearChecksumsCommandStep;
 import liquibase.command.core.TagCommandStep;
 import liquibase.command.core.helpers.DbUrlConnectionArgumentsCommandStep;
+import liquibase.report.ChangesetInfo;
+import liquibase.report.UpdateReportParameters;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.Test;
 import org.opensearch.client.opensearch._types.query_dsl.Query;
@@ -46,6 +48,18 @@ class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
     void itExecutesAHttpRequestAndCreatesTheIndexWithXMLChangelog() {
         this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.xml");
         assertThat(this.indexExists("xmltestindex")).isTrue();
+    }
+
+    @SneakyThrows
+    @Test
+    void itSkipsExecutedChangelogEntries() {
+        // run it the first time (expected to execute it)
+        this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.yaml");
+        assertThat(this.indexExists("testindex")).isTrue();
+        // run it a second time (expected to succeed and not re-run the script again)
+        final var updateResult = this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.yaml");
+        final var updateReport = (ChangesetInfo) updateResult.getResult("updateReport");
+        assertThat(updateReport.getChangesetCount()).isEqualTo(0);
     }
 
     @SneakyThrows

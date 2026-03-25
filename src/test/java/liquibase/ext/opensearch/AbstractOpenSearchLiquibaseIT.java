@@ -1,5 +1,6 @@
 package liquibase.ext.opensearch;
 
+import liquibase.command.CommandResults;
 import liquibase.command.CommandScope;
 import liquibase.command.core.UpdateCommandStep;
 import liquibase.command.core.helpers.DbUrlConnectionArgumentsCommandStep;
@@ -61,16 +62,16 @@ public abstract class AbstractOpenSearchLiquibaseIT {
         return this.connection.getOpenSearchClient();
     }
 
-    protected void doLiquibaseUpdate(final String changeLogFile, final String contexts) throws Exception {
-        new CommandScope(UpdateCommandStep.COMMAND_NAME)
+    protected CommandResults doLiquibaseUpdate(final String changeLogFile, final String contexts) throws Exception {
+        return new CommandScope(UpdateCommandStep.COMMAND_NAME)
                 .addArgumentValue(DbUrlConnectionArgumentsCommandStep.DATABASE_ARG, this.database)
                 .addArgumentValue(UpdateCommandStep.CHANGELOG_FILE_ARG, changeLogFile)
                 .addArgumentValue(UpdateCommandStep.CONTEXTS_ARG, contexts)
                 .execute();
     }
 
-    protected void doLiquibaseUpdate(final String changeLogFile) throws Exception {
-        this.doLiquibaseUpdate(changeLogFile, "");
+    protected CommandResults doLiquibaseUpdate(final String changeLogFile) throws Exception {
+        return this.doLiquibaseUpdate(changeLogFile, "");
     }
 
     protected boolean indexExists(final String indexName) throws Exception {
