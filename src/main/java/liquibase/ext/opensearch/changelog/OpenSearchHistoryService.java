@@ -146,7 +146,7 @@ public class OpenSearchHistoryService extends AbstractNoSqlHistoryService<OpenSe
         try {
             this.getOpenSearchClient()
                     .index(r -> r.index(this.getDatabaseChangeLogTableName())
-                            .id(ranChangeSet.getId())
+                            .id(ranChangeSet.toString())
                             .document(ranChangeSet)
                             .refresh(Refresh.WaitFor));
         } catch (final IOException e) {
@@ -159,7 +159,7 @@ public class OpenSearchHistoryService extends AbstractNoSqlHistoryService<OpenSe
         try {
             this.getOpenSearchClient()
                     .delete(r -> r.index(this.getDatabaseChangeLogTableName())
-                            .id(String.valueOf(changeSet.getId()))
+                            .id(changeSet.toString())
                             .refresh(Refresh.WaitFor));
         } catch (final IOException e) {
             throw new DatabaseException(e);
@@ -209,11 +209,13 @@ public class OpenSearchHistoryService extends AbstractNoSqlHistoryService<OpenSe
             );
 
             if (response.hits().total().value() == 0) {
-                getLogger().warning("tried to add a tag but found no entries in the changelog table!");
+                getLogger().warning("tried to add a tag (%s) but found no entries in the changelog table!".formatted(tagString));
                 return;
             }
 
             final var entryToTag = response.hits().hits().get(0).id();
+
+            getLogger().fine("tagging entry %s as %s".formatted(entryToTag, tagString));
 
             this.getOpenSearchClient().updateByQuery(
                     u -> u
@@ -248,8 +250,9 @@ public class OpenSearchHistoryService extends AbstractNoSqlHistoryService<OpenSe
 
         try {
             this.getOpenSearchClient()
-                    .update(r -> r.index(this.getDatabaseChangeLogTableName())
-                                    .id(changeSet.getId())
+                    .update(r -> r
+                                    .index(this.getDatabaseChangeLogTableName())
+                                    .id(changeSet.toString())
                                     .doc(new CheckSumObj(checkSum))
                                     .refresh(Refresh.WaitFor)
                             , RanChangeSet.class);
