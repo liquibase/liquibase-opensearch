@@ -3,12 +3,12 @@ databaseChangeLog:
       id: 1
       author: test
       labels: httpRequestLabel
-      context: context1
+      context: httpRequestContext
       comment: httpRequestComment
       changes:
         - httpRequest:
             method: PUT
-            path: /testindex1
+            path: /testindex
             body: >
               {
                 "mappings": {
@@ -20,10 +20,10 @@ databaseChangeLog:
                 }
               }
   - changeSet:
-      id: 2
-      author: test
+      id: 1
+      author: other
       labels: httpRequestLabel
-      context: context2
+      context: httpRequestContext
       comment: httpRequestComment
       changes:
         - httpRequest:

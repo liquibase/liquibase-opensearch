@@ -1,6 +1,6 @@
 databaseChangeLog:
   - changeSet:
-      id: 4000
+      id: 1
       author: test
       labels: httpRequestLabel
       context: httpRequestContext
@@ -20,7 +20,7 @@ databaseChangeLog:
                 }
               }
   - changeSet:
-      id: 4001
+      id: 2
       author: test
       labels: httpRequestLabel
       context: httpRequestContext
