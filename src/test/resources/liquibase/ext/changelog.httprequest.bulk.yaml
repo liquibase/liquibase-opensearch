@@ -1,0 +1,27 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1
+      author: test
+      changes:
+        - httpRequest:
+            method: PUT
+            path: /testindex
+            body: >
+              {
+                "mappings": {
+                  "properties": {
+                    "testfield": {
+                      "type": "text"
+                    }
+                  }
+                }
+              }
+        - httpRequest:
+            method: POST
+            contentType: application/x-ndjson
+            path: /testindex/_bulk
+            body: |
+              { "create": {} }
+              { "testfield": "a" }
+              { "create": {} }
+              { "testfield": "b" }

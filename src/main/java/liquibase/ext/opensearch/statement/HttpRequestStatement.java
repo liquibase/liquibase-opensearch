@@ -10,6 +10,7 @@ import lombok.Getter;
 import org.opensearch.client.opensearch.generic.Bodies;
 import org.opensearch.client.opensearch.generic.OpenSearchGenericClient.ClientOptions;
 import org.opensearch.client.opensearch.generic.Requests;
+import org.opensearch.client.transport.TransportOptions;
 
 import java.io.IOException;
 import java.util.Optional;
@@ -22,22 +23,32 @@ public class HttpRequestStatement extends AbstractOpenSearchStatement implements
     private final Logger log = Scope.getCurrentScope().getLog(getClass());
 
     private String method;
+    private String contentType;
     private String path;
     private String body;
 
     @Override
     public String toString() {
-        return String.format("HTTP %s request against %s (with a body of size %d)",
+        return String.format("executed the HTTP %s request against %s (with a body of size %d and content type %s)",
                 this.getMethod(),
                 this.getPath(),
-                Optional.ofNullable(this.getBody()).map(String::length).orElse(0));
+                Optional.ofNullable(this.getBody()).map(String::length).orElse(0),
+                Optional.ofNullable(this.getContentType()).orElse("application/json"));
     }
 
     @Override
     public void execute(final OpenSearchLiquibaseDatabase database) throws DatabaseException {
         log.info(this.toString());
 
-        final var httpClient = this.getOpenSearchClient(database).generic().withClientOptions(ClientOptions.throwOnHttpErrors());
+        final var transportOptionsBuilder = TransportOptions.builder();
+        if (this.contentType != null) {
+            transportOptionsBuilder.addHeader("Content-Type",  this.getContentType());
+        }
+        final var transportOptions = transportOptionsBuilder.build();
+
+        final var httpClient = this.getOpenSearchClient(database).generic()
+                .withClientOptions(ClientOptions.throwOnHttpErrors())
+                .withTransportOptions(transportOptions);
 
         final var request = Requests.builder()
                 .endpoint(this.getPath())
