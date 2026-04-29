@@ -9,6 +9,7 @@ import liquibase.statement.SqlStatement;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.apache.hc.core5.http.ContentType;
 
 import java.util.Optional;
 
@@ -21,21 +22,23 @@ import java.util.Optional;
 public class HttpRequestChange extends AbstractChange {
 
     private String method;
+    private String contentType;
     private String path;
     private String body;
 
     @Override
     public String getConfirmationMessage() {
-        return String.format("executed the HTTP %s request against %s (with a body of size %d)",
+        return String.format("executed the HTTP %s request against %s (with a body of size %d and content type %s)",
                 this.getMethod(),
                 this.getPath(),
-                Optional.ofNullable(this.getBody()).map(String::length).orElse(0));
+                Optional.ofNullable(this.getBody()).map(String::length).orElse(0),
+                Optional.ofNullable(this.getContentType()).orElse(ContentType.APPLICATION_JSON.getMimeType()));
     }
 
     @Override
     public SqlStatement[] generateStatements(final Database database) {
         return new SqlStatement[] {
-            new HttpRequestStatement(this.getMethod(), this.getPath(), this.getBody())
+            new HttpRequestStatement(this.getMethod(), this.getContentType(), this.getPath(), this.getBody())
         };
     }
 }
