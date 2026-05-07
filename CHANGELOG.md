@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+* The `Content-Type` of the request can now be specified using the optional `contentType` field on `httpRequest`.
+  The default is `application/json`, but for bulk requests this has to be set to `application/x-ndjson`
+
 ### Fixed
 
 * Changesets are only unique in the changelog filename + `id` + `author` combination, but so far `liquibase-opensearch`

@@ -180,4 +180,12 @@ class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
         assertThat(countAfterTagWithId2).isEqualTo(1);
     }
 
+    @SneakyThrows
+    @Test
+    void itSupportsAlternativeContentTypes() {
+        this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.bulk.yaml");
+        assertThat(this.indexExists("testindex")).isTrue();
+        assertThat(this.getDocumentCount("testindex")).isEqualTo(2);
+    }
+
 }

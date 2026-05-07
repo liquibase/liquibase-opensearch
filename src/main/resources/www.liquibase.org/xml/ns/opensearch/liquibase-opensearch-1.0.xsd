@@ -19,11 +19,12 @@
             <xsd:enumeration value="PATCH" />
         </xsd:restriction>
     </xsd:simpleType>
-    
+
     <xsd:element name="httpRequest">
         <xsd:complexType>
             <xsd:all>
                 <xsd:element name="method" type="httpMethods" />
+                <xsd:element name="contentType" type="xsd:string" minOccurs="0" />
                 <xsd:element name="path" type="xsd:string" />
                 <xsd:element name="body" type="xsd:string" />
             </xsd:all>
