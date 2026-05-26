@@ -3,24 +3,19 @@
 This [Liquibase] extension supports managing migrations for [OpenSearch].
 
 > [!TIP]
-> If you wish to use Spring Boot you should be using [`liquibase-opensearch-spring-boot-starter`] instead of using this directly.
+> If you wish to use Spring Boot you should be using [`liquibase-opensearch-spring-boot-starter`] instead of using this
+> directly.
 
 ## Usage
 
-### With the Liquibase CLI
-
-To use this with the [Liquibase CLI] follow these steps:
-1. Download & install the Liquibase CLI
-2. Download the fat jar of `liquibase-opensearch`
-3. Put the fat jar in the `lib` folder of the CLI
-4. Use the CLI and prefix the URL of OpenSearch with `opensearch:` (e.g. `opensearch:http://localhost:9200`)
-
-### In a Java Project
-
-To use this in your java project, add a dependency to `org.liquibase.ext:liquibase-opensearch`.
+### Supported Liquibase Change Types
 
 This supports a single liquibase change type called `httpRequest` which executes the given request against OpenSearch.
-A simple example changelog might look like this:
+Other change types are not supported.
+
+All examples shown here are YAML files, however all file types supported by Liquibase are supported.
+
+A simple changelog might look like this:
 ```yaml
 databaseChangeLog:
   - changeSet:
@@ -49,6 +44,38 @@ databaseChangeLog:
                 "testfield": "foo"
               }
 ```
+
+Some APIs - like the bulk API - requires a different content type, this can be set as well:
+```yaml
+        - httpRequest:
+            method: POST
+            contentType: application/x-ndjson
+            path: /testindex/_bulk
+            body: |
+              { "create": {} }
+              { "testfield": "a" }
+              { "create": {} }
+              { "testfield": "b" }
+```
+
+`contentType` is optional, the default is `application/json`. All other fields are mandatory.
+
+### With the Liquibase CLI
+
+To use this with the [Liquibase CLI] follow these steps:
+1. Download & install the Liquibase CLI
+2. Download the fat jar of `liquibase-opensearch` from the [GitHub releases page]
+3. Put the fat jar in the `lib` folder of the CLI
+4. Use the CLI and prefix the URL of OpenSearch with `opensearch:` (e.g. `opensearch:http://localhost:9200`)
+
+The standard liquibase integration supports only connections with either HTTP or HTTPS with valid TLS certificates and
+either no authentication or basic authentication (username/password). If you need another form of authentication or need
+to use untrusted TLS certificates you have to use Java and construct your own custom `OpenSearchClient` (see below for
+an example).
+
+### In a Java Project
+
+To use this in your java project, add a dependency to `org.liquibase.ext:liquibase-opensearch`.
 
 #### OpenSearch Connection
 
@@ -121,6 +148,7 @@ This project is licensed under the Apache License Version 2.0 - see the [LICENSE
 [OpenSearch]: https://opensearch.org/
 [`liquibase-opensearch-spring-boot-starter`]: https://github.com/liquibase/liquibase-opensearch-springboot-starter/
 [Liquibase CLI]: https://docs.liquibase.com/secure/reference-guide-5-1/parameters/working-with-command-parameters
+[GitHub releases page]: https://github.com/liquibase/liquibase-opensearch/releases
 [custom-client]: https://docs.opensearch.org/docs/latest/clients/java/
 [CustomOpenSearchClientLiquibaseIT]: src/test/java/liquibase/ext/opensearch/CustomOpenSearchClientLiquibaseIT.java
 [Semantic Versioning]: https://semver.org/spec/v2.0.0.html
