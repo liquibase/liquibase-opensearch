@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-05-27
+
 ### Added
 
 * The `Content-Type` of the request can now be specified using the optional `contentType` field on `httpRequest`.
@@ -32,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Updated to `opensearch-java` v3 - this is a breaking change for consumers!
 
-[Unreleased]: https://github.com/liquibase/liquibase-opensearch/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/liquibase/liquibase-opensearch/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/liquibase/liquibase-opensearch/compare/v0.2.0...v1.0.0
 [0.2.0]: https://github.com/liquibase/liquibase-opensearch/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/liquibase/liquibase-opensearch/compare/v0.0.1...v0.1.0
