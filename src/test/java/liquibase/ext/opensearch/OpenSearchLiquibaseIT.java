@@ -7,7 +7,6 @@ import liquibase.command.CommandScope;
 import liquibase.command.core.ClearChecksumsCommandStep;
 import liquibase.command.core.TagCommandStep;
 import liquibase.command.core.helpers.DbUrlConnectionArgumentsCommandStep;
-import liquibase.report.ChangesetInfo;
 import liquibase.report.UpdateReportParameters;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.Test;
@@ -17,6 +16,7 @@ import org.opensearch.client.opensearch._types.query_dsl.Query;
 import java.util.Date;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
 
@@ -186,6 +186,13 @@ class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
         this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.bulk.yaml");
         assertThat(this.indexExists("testindex")).isTrue();
         assertThat(this.getDocumentCount("testindex")).isEqualTo(2);
+    }
+
+    @Test
+    void itFailsOnUnsupportedChangeTypes() {
+        assertThatThrownBy(
+                () -> this.doLiquibaseUpdate("liquibase/ext/changelog.unsupported-changetype.yaml")
+        ).hasMessageContaining("Unknown type: liquibase.statement.core.CreateTableStatement");
     }
 
 }
