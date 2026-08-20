@@ -1,7 +1,5 @@
 package liquibase.ext.opensearch;
 
-import liquibase.database.ConnectionServiceFactory;
-import liquibase.database.DatabaseFactory;
 import liquibase.ext.opensearch.database.OpenSearchConnection;
 import liquibase.ext.opensearch.database.OpenSearchLiquibaseDatabase;
 import lombok.SneakyThrows;
@@ -95,11 +93,14 @@ class CustomOpenSearchClientLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
     protected void beforeEach() {
         // we want to use our own connection (e.g. because we have requirements which are not fulfilled by the standard
         // client constructed by liquibase).
-        // => do not rely on liquibase' standard mechanism of constructing a new connection, instead we force it to take our own.
+        // => build the database ourselves and hand it to liquibase via
+        //    `DbUrlConnectionArgumentsCommandStep.DATABASE_ARG` (see `AbstractOpenSearchLiquibaseIT#doLiquibaseUpdate`),
+        //    which makes `DbUrlConnectionCommandStep` use it as-is instead of constructing one.
+        // note: registering the connection/database with `ConnectionServiceFactory`/`DatabaseFactory` would NOT work.
+        //       both factories treat registered objects as mere prototypes and hand out a fresh instance built via the
+        //       no-arg constructor, so the custom client would be silently dropped.
         this.connection = new OpenSearchConnection(this.newOpenSearchClientFromContainer());
-        ConnectionServiceFactory.getInstance().register(this.connection);
         this.database = new OpenSearchLiquibaseDatabase(this.connection);
-        DatabaseFactory.getInstance().register(this.database);
     }
 
     @SneakyThrows
