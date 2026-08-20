@@ -3,6 +3,8 @@ package liquibase.ext.opensearch.changelog;
 import liquibase.ContextExpression;
 import liquibase.change.CheckSum;
 import liquibase.changelog.RanChangeSet;
+import liquibase.exception.DatabaseException;
+import liquibase.ext.opensearch.database.OpenSearchLiquibaseDatabase;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
@@ -75,5 +77,25 @@ class OpenSearchHistoryServiceTest {
                 "contexts",
                 "originalString"
         );
+    }
+
+    /**
+     * {@link OpenSearchHistoryService#getNextSequenceValue()} caches the counter in memory, so
+     * {@link OpenSearchHistoryService#reset()} has to drop it. Otherwise a rollback followed by an
+     * update keeps counting from the stale value instead of restarting from the changelog index.
+     */
+    @Test
+    void resetDropsTheCachedSequenceValue() throws DatabaseException {
+        // Without a connection the sequence starts from zero, so the values are predictable
+        // and the test does not need a running OpenSearch instance.
+        final var historyService = new OpenSearchHistoryService();
+        historyService.setDatabase(new OpenSearchLiquibaseDatabase());
+
+        assertThat(historyService.getNextSequenceValue()).isEqualTo(1);
+        assertThat(historyService.getNextSequenceValue()).isEqualTo(2);
+
+        historyService.reset();
+
+        assertThat(historyService.getNextSequenceValue()).isEqualTo(1);
     }
 }
