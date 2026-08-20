@@ -8,6 +8,7 @@ import liquibase.database.DatabaseFactory;
 import liquibase.ext.opensearch.database.OpenSearchConnection;
 import liquibase.ext.opensearch.database.OpenSearchLiquibaseDatabase;
 import lombok.SneakyThrows;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInstance;
 import org.opensearch.client.opensearch.OpenSearchClient;
@@ -48,14 +49,26 @@ public abstract class AbstractOpenSearchLiquibaseIT {
         ));
     }
 
-    @SneakyThrows
     @BeforeEach
+    @SneakyThrows
     protected void beforeEach() {
         final String url = "opensearch:" + container.getHttpHostAddress();
         final String username = container.getUsername();
         final String password = container.getPassword();
         database = (OpenSearchLiquibaseDatabase) DatabaseFactory.getInstance().openDatabase(url, username, password, null, null);
         connection = (OpenSearchConnection) this.database.getConnection();
+    }
+
+    @AfterEach
+    @SneakyThrows
+    protected void afterEach() {
+        // `beforeEach` may have failed before assigning these.
+        if (this.database != null) {
+            this.database.close();
+        }
+        if (this.connection != null) {
+            this.connection.close();
+        }
     }
 
     protected OpenSearchClient getOpenSearchClient() {
