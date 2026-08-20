@@ -118,9 +118,7 @@ void main() {
     final var changeLogFile = "path/to/changelog.yaml";
 
     final var connection = new OpenSearchConnection(openSearchClient);
-    ConnectionServiceFactory.getInstance().register(connection);
     final var database = new OpenSearchLiquibaseDatabase(connection);
-    DatabaseFactory.getInstance().register(database);
 
     // execute the migration
     new CommandScope(UpdateCommandStep.COMMAND_NAME)

@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+* (Re)creating the database change log now clears the `FastCheckService` cache. This is only relevant if Liquibase is
+  used against the same database while between two changelog runs (without stopping the application) the database change
+  log is deleted and recreated. In that case, Liquibase would otherwise not detect that the database change log has
+  changed and would not re-run changesets that have already been run before. Realistically this only applies to tests.
+
 ## [2.0.0] - 2026-05-28
 
 ### Breaking Changes

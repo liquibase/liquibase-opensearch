@@ -1,6 +1,8 @@
 package liquibase.ext.opensearch.database;
 
+import liquibase.Scope;
 import liquibase.exception.DatabaseException;
+import liquibase.logging.Logger;
 import liquibase.nosql.database.AbstractNoSqlConnection;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -43,6 +45,7 @@ import static liquibase.ext.opensearch.database.OpenSearchLiquibaseDatabase.OPEN
 @Setter
 @NoArgsConstructor
 public class OpenSearchConnection extends AbstractNoSqlConnection {
+    private final Logger log = Scope.getCurrentScope().getLog(getClass());
 
     private OpenSearchClient openSearchClient;
     private Optional<InfoResponse> openSearchInfo = Optional.empty();
@@ -118,14 +121,20 @@ public class OpenSearchConnection extends AbstractNoSqlConnection {
 
     @Override
     public String getURL() {
-        // if we have a connection we should return the name of the cluster
-        // this makes more sense than a list of URIs (which all point to the same cluster anyway).
-        if (this.openSearchClient != null) {
-            try {
-                return this.getOpenSearchInfo().clusterName();
-            } catch (final Exception e) {
-                // do nothing, continue with alternative
-            }
+        // note: liquibase uses this value to identify the target cluster, e.g. as part of the cache key of
+        //       `liquibase.changelog.FastCheckService`. it must therefore be unique per cluster: cluster names are not
+        //       (every OpenSearch docker container is called `docker-cluster` by default), accordingly we also include
+        //       the cluster UUID. otherwise liquibase can wrongly consider a different cluster to be up-to-date and
+        //       silently skip the update.
+        try {
+            final var info = this.getOpenSearchInfo();
+            final var clusterName = info.clusterName();
+            final var clusterUuid = info.clusterUuid();
+
+            return clusterName + " (" + clusterUuid + ")";
+        } catch (final Exception e) {
+            log.warning("Could not get cluster name and UUID", e);
+            // do nothing, continue with alternative
         }
 
         return this.uris.stream()
