@@ -23,6 +23,7 @@ package liquibase.nosql.changelog;
 import liquibase.Scope;
 import liquibase.changelog.AbstractChangeLogHistoryService;
 import liquibase.changelog.ChangeSet;
+import liquibase.changelog.FastCheckService;
 import liquibase.changelog.RanChangeSet;
 import liquibase.exception.DatabaseException;
 import liquibase.exception.DatabaseHistoryException;
@@ -124,6 +125,8 @@ public abstract class AbstractNoSqlHistoryService<D extends AbstractNoSqlDatabas
             getLogger().info("Created database history collection : "
                     + this.getDatabaseChangeLogTableName());
             this.hasDatabaseChangeLogTable = true;
+
+            Scope.getCurrentScope().getSingleton(FastCheckService.class).clearCache();
         }
 
         if (!adjustedChangeLogTable) {
