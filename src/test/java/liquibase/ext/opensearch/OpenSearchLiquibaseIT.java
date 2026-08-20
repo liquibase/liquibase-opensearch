@@ -7,6 +7,9 @@ import liquibase.command.CommandScope;
 import liquibase.command.core.ClearChecksumsCommandStep;
 import liquibase.command.core.TagCommandStep;
 import liquibase.command.core.helpers.DbUrlConnectionArgumentsCommandStep;
+import liquibase.database.DatabaseFactory;
+import liquibase.ext.opensearch.database.OpenSearchConnection;
+import liquibase.ext.opensearch.database.OpenSearchLiquibaseDatabase;
 import liquibase.report.UpdateReportParameters;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.Test;
@@ -57,6 +60,42 @@ class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
     void itExecutesAHttpRequestAndCreatesTheIndexWithXMLChangelog() {
         this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.xml");
         assertThat(this.indexExists("xmltestindex")).isTrue();
+    }
+
+    /**
+     * Liquibase caches the result of its "is the database up to date?" fast check
+     * ({@link liquibase.changelog.FastCheckService}) for the whole JVM, using
+     * {@link liquibase.database.DatabaseConnection#getURL()} as part of the cache key. If that value is not unique per
+     * cluster then liquibase silently skips the update against a second cluster: it reports
+     * "Database is up to date, no changesets to execute" without ever acquiring the lock or running a changeset.
+     */
+    @SneakyThrows
+    @Test
+    void itDoesNotReuseTheUpToDateCacheAcrossClusters() {
+        // run it twice so that liquibase caches that this changelog has nothing left to run
+        this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.yaml");
+        this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.yaml");
+        assertThat(this.indexExists("testindex")).isTrue();
+
+        try (final var otherContainer = this.newContainer()) {
+            otherContainer.start();
+
+            this.database.close();
+            this.connection.close();
+            this.database = (OpenSearchLiquibaseDatabase) DatabaseFactory.getInstance().openDatabase(
+                    "opensearch:" + otherContainer.getHttpHostAddress(),
+                    otherContainer.getUsername(),
+                    otherContainer.getPassword(),
+                    null,
+                    null);
+            this.connection = (OpenSearchConnection) this.database.getConnection();
+
+            // sanity check: this really is a different, empty cluster
+            assertThat(this.indexExists("testindex")).isFalse();
+
+            this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.yaml");
+            assertThat(this.indexExists("testindex")).isTrue();
+        }
     }
 
     /**
