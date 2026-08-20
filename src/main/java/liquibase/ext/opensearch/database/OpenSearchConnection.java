@@ -1,6 +1,8 @@
 package liquibase.ext.opensearch.database;
 
+import liquibase.Scope;
 import liquibase.exception.DatabaseException;
+import liquibase.logging.Logger;
 import liquibase.nosql.database.AbstractNoSqlConnection;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -43,6 +45,7 @@ import static liquibase.ext.opensearch.database.OpenSearchLiquibaseDatabase.OPEN
 @Setter
 @NoArgsConstructor
 public class OpenSearchConnection extends AbstractNoSqlConnection {
+    private final Logger log = Scope.getCurrentScope().getLog(getClass());
 
     private OpenSearchClient openSearchClient;
     private Optional<InfoResponse> openSearchInfo = Optional.empty();
@@ -118,20 +121,37 @@ public class OpenSearchConnection extends AbstractNoSqlConnection {
 
     @Override
     public String getURL() {
-        // if we have a connection we should return the name of the cluster
-        // this makes more sense than a list of URIs (which all point to the same cluster anyway).
-        if (this.openSearchClient != null) {
-            try {
-                return this.getOpenSearchInfo().clusterName();
-            } catch (final Exception e) {
-                // do nothing, continue with alternative
-            }
-        }
-
-        return this.uris.stream()
+        // note: liquibase uses this value to identify the target cluster, e.g. as part of the cache key of
+        //       `liquibase.changelog.FastCheckService`. it must therefore be unique per cluster: cluster names are not
+        //       (every OpenSearch docker container is called `docker-cluster` by default), so the URIs have to be part
+        //       of it. otherwise liquibase can wrongly consider a different cluster to be up-to-date and silently skip
+        //       the update.
+        final var uriList = this.uris.stream()
                 .flatMap(List::stream)
                 .map(URI::toString)
                 .collect(Collectors.joining(OPENSEARCH_URI_SEPARATOR));
+
+        // the cluster name alone is not unique, but it's helpful for humans, thus report both where possible.
+        final var clusterName = this.getClusterName();
+
+        if (uriList.isEmpty()) {
+            // no URIs known (an existing `OpenSearchClient` was passed in), thus the cluster name is all we have.
+            return clusterName.orElse("");
+        }
+
+        return clusterName.map(name -> name + " (" + uriList + ")").orElse(uriList);
+    }
+
+    private Optional<String> getClusterName() {
+        if (this.openSearchClient == null) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(this.getOpenSearchInfo().clusterName());
+        } catch (final Exception e) {
+            log.warning("Could not get cluster name", e);
+            return Optional.empty();
+        }
     }
 
     @Override
