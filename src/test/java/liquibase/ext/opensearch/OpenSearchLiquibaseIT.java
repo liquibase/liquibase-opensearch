@@ -29,9 +29,12 @@ class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
         assertThat(this.getOpenSearchClient().info().clusterName()).isEqualTo("docker-cluster");
     }
 
+    @SneakyThrows
     @Test
-    void connectionReturnsClusterNameAsUrl() {
-        assertThat(this.connection.getURL()).isEqualTo("docker-cluster");
+    void connectionReturnsClusterNameAndUrisAsUrl() {
+        final var expectedUuid = this.getOpenSearchClient().info().clusterUuid();
+        assertThat(this.connection.getURL())
+                .isEqualTo("docker-cluster (%s)".formatted(expectedUuid));
     }
 
     @SneakyThrows
