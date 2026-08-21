@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   used against the same database while between two changelog runs (without stopping the application) the database change
   log is deleted and recreated. In that case, Liquibase would otherwise not detect that the database change log has
   changed and would not re-run changesets that have already been run before. Realistically this only applies to tests.
+* `Connection#getURL` now contains the UUID of the cluster to make the value unique. This is needed since it is used as
+  a key in the `FastCheckService` cache and otherwise Liquibase would not detect that the database has changed if the
+  same connection is used for two different clusters.
 
 ## [2.0.0] - 2026-05-28
 
