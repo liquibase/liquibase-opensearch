@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+* Updated to Liquibase 5.0.4
+
 ### Fixed
 
 * (Re)creating the database change log now clears the `FastCheckService` cache. This is only relevant if Liquibase is
