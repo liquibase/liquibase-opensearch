@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Updated to Liquibase 5.0.4
 * Updated to `opensearch-java:3.10.0`
+* Migrated from Jackson 2 to Jackson 3 (`tools.jackson.core`). The OpenSearch client is now created with
+  `org.opensearch.client.json.jackson3.JacksonJsonpMapper`; Jackson 2 is no longer on the classpath of this extension.
 
 ### Fixed
 

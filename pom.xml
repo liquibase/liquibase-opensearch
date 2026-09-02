@@ -70,6 +70,15 @@
                     <groupId>org.opensearch.client</groupId>
                     <artifactId>opensearch-rest-client</artifactId>
                 </exclusion>
+                <!-- Jackson 2 is pulled in transitively; this project uses Jackson 3 -->
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <artifactId>jackson-core</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <artifactId>jackson-databind</artifactId>
+                </exclusion>
             </exclusions>
         </dependency>
         <dependency>
@@ -79,14 +88,14 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
+            <groupId>tools.jackson.core</groupId>
             <artifactId>jackson-core</artifactId>
-            <version>2.22.2</version>
+            <version>3.2.2</version>
         </dependency>
         <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
+            <groupId>tools.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>2.22.2</version>
+            <version>3.2.2</version>
         </dependency>
         <dependency>
             <groupId>org.apache.httpcomponents.core5</groupId>
