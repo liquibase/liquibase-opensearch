@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 * Updated to Liquibase 5.0.4
+* Updated to `opensearch-java:3.10.0`
 
 ### Fixed
 
