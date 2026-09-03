@@ -2,6 +2,11 @@ name: Release Extension to Sonatype
 
 on:
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing release tag to publish (e.g. v2.1.0). Leave empty to prepare a new Maven release."
+        required: false
+        type: string
   release:
     types: [published]
 
@@ -10,8 +15,11 @@ permissions:
   pull-requests: write
   packages: write
   id-token: write
+  actions: read # required by "Get build-logic ref" to query the Actions API (TECHOPS-609)
 
 jobs:
   release:
     uses: liquibase/build-logic/.github/workflows/extension-release-published.yml@main
     secrets: inherit
+    with:
+      tag: ${{ inputs.tag }}
