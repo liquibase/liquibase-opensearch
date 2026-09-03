@@ -10,7 +10,7 @@
 
     <groupId>org.liquibase.ext</groupId>
     <artifactId>liquibase-opensearch</artifactId>
-    <version>2.0.0-SNAPSHOT</version>
+    <version>2.1.0-SNAPSHOT</version>
     <name>Liquibase OpenSearch Extension</name>
     <packaging>jar</packaging>
 
@@ -41,7 +41,7 @@
   </scm>
 
     <properties>
-        <liquibase.version>5.0.3</liquibase.version>
+        <liquibase.version>5.0.4</liquibase.version>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <sonar.organization>liquibase</sonar.organization>
@@ -64,11 +64,20 @@
         <dependency>
             <groupId>org.opensearch.client</groupId>
             <artifactId>opensearch-java</artifactId>
-            <version>3.7.0</version>
+            <version>3.10.0</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.opensearch.client</groupId>
                     <artifactId>opensearch-rest-client</artifactId>
+                </exclusion>
+                <!-- Jackson 2 is pulled in transitively; this project uses Jackson 3 -->
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <artifactId>jackson-core</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <artifactId>jackson-databind</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>
@@ -79,14 +88,14 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
+            <groupId>tools.jackson.core</groupId>
             <artifactId>jackson-core</artifactId>
-            <version>2.22.2</version>
+            <version>3.2.2</version>
         </dependency>
         <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
+            <groupId>tools.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>2.22.2</version>
+            <version>3.2.2</version>
         </dependency>
         <dependency>
             <groupId>org.apache.httpcomponents.core5</groupId>
