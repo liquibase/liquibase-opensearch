@@ -5,6 +5,7 @@ import liquibase.database.Database;
 import liquibase.exception.DatabaseException;
 import liquibase.ext.opensearch.database.OpenSearchConnection;
 import liquibase.ext.opensearch.database.OpenSearchLiquibaseDatabase;
+import liquibase.ext.opensearch.database.OpenSearchSearchHelper;
 import liquibase.lockservice.DatabaseChangeLogLock;
 import liquibase.logging.Logger;
 import liquibase.nosql.lockservice.AbstractNoSqlLockService;
@@ -12,7 +13,6 @@ import liquibase.util.NetUtil;
 import org.apache.hc.core5.http.HttpStatus;
 import org.opensearch.client.opensearch.OpenSearchClient;
 import org.opensearch.client.opensearch._types.Refresh;
-import org.opensearch.client.opensearch.core.search.Hit;
 import org.opensearch.client.opensearch.indices.PutMappingRequest;
 import org.opensearch.client.transport.httpclient5.ResponseException;
 
@@ -20,7 +20,6 @@ import java.io.IOException;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 public class OpenSearchLockService extends AbstractNoSqlLockService<OpenSearchLiquibaseDatabase> {
 
@@ -133,11 +132,7 @@ public class OpenSearchLockService extends AbstractNoSqlLockService<OpenSearchLi
     @Override
     protected List<DatabaseChangeLogLock> queryLocks() throws DatabaseException {
         try {
-            final var response = this.getOpenSearchClient()
-                    .search(s -> s.index(this.getDatabaseChangeLogLockTableName()), DatabaseChangeLogLock.class);
-            return response.hits().hits().stream()
-                    .map(Hit::source)
-                    .toList();
+            return OpenSearchSearchHelper.searchAll(this.getOpenSearchClient(), this.getDatabaseChangeLogLockTableName(), DatabaseChangeLogLock.class, "id");
         } catch (final IOException e) {
             throw new DatabaseException(e);
         }

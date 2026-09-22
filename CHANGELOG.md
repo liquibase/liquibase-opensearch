@@ -6,13 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-
-* Connecting to an unsupported OpenSearch version (older than 2.0) now fails with a clear error message.
-
 ### Fixed
 
 * `orderExecuted` is now stored for every changelog entry (it was always empty before).
+* `liquibase-opensearch` can now handle more than 10 entries in the changelog index (it now correctly accepts an
+  unlimited amount of entries).
 
 ## [2.1.0] - 2026-09-03
 

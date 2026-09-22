@@ -1,0 +1,133 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1
+      author: test
+      changes:
+        - httpRequest:
+            method: PUT
+            path: /testindex-twelve/_doc/1
+            body: >
+              {
+                "testfield": "1"
+              }
+  - changeSet:
+      id: 2
+      author: test
+      changes:
+        - httpRequest:
+            method: PUT
+            path: /testindex-twelve/_doc/2
+            body: >
+              {
+                "testfield": "2"
+              }
+  - changeSet:
+      id: 3
+      author: test
+      changes:
+        - httpRequest:
+            method: PUT
+            path: /testindex-twelve/_doc/3
+            body: >
+              {
+                "testfield": "3"
+              }
+  - changeSet:
+      id: 4
+      author: test
+      changes:
+        - httpRequest:
+            method: PUT
+            path: /testindex-twelve/_doc/4
+            body: >
+              {
+                "testfield": "4"
+              }
+  - changeSet:
+      id: 5
+      author: test
+      changes:
+        - httpRequest:
+            method: PUT
+            path: /testindex-twelve/_doc/5
+            body: >
+              {
+                "testfield": "5"
+              }
+  - changeSet:
+      id: 6
+      author: test
+      changes:
+        - httpRequest:
+            method: PUT
+            path: /testindex-twelve/_doc/6
+            body: >
+              {
+                "testfield": "6"
+              }
+  - changeSet:
+      id: 7
+      author: test
+      changes:
+        - httpRequest:
+            method: PUT
+            path: /testindex-twelve/_doc/7
+            body: >
+              {
+                "testfield": "7"
+              }
+  - changeSet:
+      id: 8
+      author: test
+      changes:
+        - httpRequest:
+            method: PUT
+            path: /testindex-twelve/_doc/8
+            body: >
+              {
+                "testfield": "8"
+              }
+  - changeSet:
+      id: 9
+      author: test
+      changes:
+        - httpRequest:
+            method: PUT
+            path: /testindex-twelve/_doc/9
+            body: >
+              {
+                "testfield": "9"
+              }
+  - changeSet:
+      id: 10
+      author: test
+      changes:
+        - httpRequest:
+            method: PUT
+            path: /testindex-twelve/_doc/10
+            body: >
+              {
+                "testfield": "10"
+              }
+  - changeSet:
+      id: 11
+      author: test
+      changes:
+        - httpRequest:
+            method: PUT
+            path: /testindex-twelve/_doc/11
+            body: >
+              {
+                "testfield": "11"
+              }
+  - changeSet:
+      id: 12
+      author: test
+      changes:
+        - httpRequest:
+            method: PUT
+            path: /testindex-twelve/_doc/12
+            body: >
+              {
+                "testfield": "12"
+              }

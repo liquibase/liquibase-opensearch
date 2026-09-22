@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.opensearch.client.opensearch._types.Refresh;
 import org.opensearch.client.opensearch._types.SortOrder;
 import org.opensearch.client.opensearch._types.query_dsl.Query;
+import org.opensearch.client.opensearch.core.BulkRequest;
 
 import java.util.Date;
 import java.util.List;
@@ -176,6 +177,62 @@ class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
         assertThat(this.storedOrderExecuted()).containsExactlyElementsOf(range(1, 3));
     }
 
+    /**
+     * A plain search returns only 10 hits by default, so up to and including 2.1.0 only the first 10 changelog
+     * entries were considered as "already executed".
+     */
+    @SneakyThrows
+    @Test
+    void itHandlesMoreThanTenChangeSets() {
+        assertThat(this.executedChangeSetCount(this.doLiquibaseUpdate("liquibase/ext/changelog.twelve-changesets.yaml"))).isEqualTo(12);
+        assertThat(this.getDocumentCount("testindex-twelve")).isEqualTo(12);
+
+        // re-running must not execute anything again
+        assertThat(this.executedChangeSetCount(this.doLiquibaseUpdate("liquibase/ext/changelog.twelve-changesets.yaml"))).isZero();
+        assertThat(this.loadRanChangeSets()).extracting(RanChangeSet::getOrderExecuted).containsExactlyElementsOf(range(1, 12));
+    }
+
+    /**
+     * The changelog index is loaded page-wise ({@link liquibase.ext.opensearch.database.OpenSearchSearchHelper#PAGE_SIZE}),
+     * this ensures that the paging works with real changelog entries as they are stored by this extension.
+     */
+    @SneakyThrows
+    @Test
+    void itLoadsMoreThanOnePageOfChangelogEntries() {
+        final var seeded = 1005;
+        this.doLiquibaseUpdate("liquibase/ext/changelog.empty.yaml");
+        this.seedRanChangeSets(seeded, false);
+
+        assertThat(this.executedChangeSetCount(this.doLiquibaseUpdate("liquibase/ext/changelog.twelve-changesets.yaml"))).isEqualTo(12);
+
+        final var ranChangeSets = this.loadRanChangeSets();
+        assertThat(ranChangeSets).hasSize(seeded + 12);
+        assertThat(ranChangeSets).extracting(RanChangeSet::getOrderExecuted).containsExactlyElementsOf(range(1, seeded + 12));
+    }
+
+    /**
+     * Up to and including version 2.1.0 {@code orderExecuted} was never stored (it's always {@code null}). Such legacy
+     * entries must still all be loaded (even if they share the same {@code dateExecuted}) and must sort before any
+     * new entries.
+     */
+    @SneakyThrows
+    @Test
+    void itLoadsLegacyChangelogEntriesWithoutOrderExecuted() {
+        final var seeded = 1005;
+        this.doLiquibaseUpdate("liquibase/ext/changelog.empty.yaml");
+        this.seedRanChangeSets(seeded, true);
+
+        assertThat(this.executedChangeSetCount(this.doLiquibaseUpdate("liquibase/ext/changelog.twelve-changesets.yaml"))).isEqualTo(12);
+
+        final var ranChangeSets = this.loadRanChangeSets();
+        assertThat(ranChangeSets).hasSize(seeded + 12);
+        assertThat(ranChangeSets.subList(0, seeded))
+                .allSatisfy(r -> assertThat(r.getOrderExecuted()).isNull())
+                .extracting(RanChangeSet::getId)
+                .containsExactlyInAnyOrderElementsOf(range(1, seeded).stream().map(String::valueOf).toList());
+        assertThat(ranChangeSets.subList(seeded, seeded + 12)).extracting(RanChangeSet::getOrderExecuted).containsExactlyElementsOf(range(1, 12));
+    }
+
     @SneakyThrows
     @Test
     void itHandlesReRuns() {
@@ -296,6 +353,24 @@ class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
                 .hits().hits().stream()
                 .map(h -> h.source().getOrderExecuted())
                 .toList();
+    }
+
+    /**
+     * Writes changelog entries directly into the index, all sharing the same {@code dateExecuted}.
+     *
+     * @param legacy if {@code true} the entries are written as versions up to and including 2.1.0 did: without {@code orderExecuted}.
+     */
+    private void seedRanChangeSets(final int count, final boolean legacy) throws Exception {
+        final var dateExecuted = new Date();
+        final var bulk = new BulkRequest.Builder().index(this.database.getDatabaseChangeLogTableName()).refresh(Refresh.True);
+        IntStream.rangeClosed(1, count).forEach(i -> {
+            final var ranChangeSet = new RanChangeSet("liquibase/ext/seeded.yaml", String.valueOf(i), "seed", null, dateExecuted, null, ChangeSet.ExecType.EXECUTED, "seeded", null, null, null, null, null);
+            if (!legacy) {
+                ranChangeSet.setOrderExecuted(i);
+            }
+            bulk.operations(op -> op.index(idx -> idx.id(ranChangeSet.toString()).document(ranChangeSet)));
+        });
+        assertThat(this.getOpenSearchClient().bulk(bulk.build()).errors()).isFalse();
     }
 
 }
