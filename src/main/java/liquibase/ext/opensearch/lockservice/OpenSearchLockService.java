@@ -89,7 +89,13 @@ public class OpenSearchLockService extends AbstractNoSqlLockService<OpenSearchLi
 
     @Override
     protected boolean isLocked() throws DatabaseException {
-        return !this.queryLocks().isEmpty(); // ignore the fact that there should be exactly 0 or 1 entry here to be more conservative
+        try {
+            final var response = this.getOpenSearchClient()
+                    .count(c -> c.index(this.getDatabaseChangeLogLockTableName()));
+            return response.count() > 0;
+        } catch (final IOException e) {
+            throw new DatabaseException(e);
+        }
     }
 
     @Override
