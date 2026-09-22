@@ -233,7 +233,11 @@ public class OpenSearchHistoryService extends AbstractNoSqlHistoryService<OpenSe
 
     @Override
     protected long countRanChangeSets() throws DatabaseException {
-        return this.queryRanChangeSets().size();
+        try {
+            return this.getOpenSearchClient().count(c -> c.index(this.getDatabaseChangeLogTableName())).count();
+        } catch (final IOException e) {
+            throw new DatabaseException(e);
+        }
     }
 
     @Override
