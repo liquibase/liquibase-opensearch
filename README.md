@@ -130,7 +130,7 @@ void main() {
 
 ## OpenSearch Compatibility
 
-`liquibase-opensearch` is currently compatible with OpenSearch 2.x and 3.x.
+`liquibase-opensearch` is currently compatible with OpenSearch 2.x and 3.x (older versions are rejected when connecting).
 
 ## Versioning
 

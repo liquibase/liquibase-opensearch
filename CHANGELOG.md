@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+* Connecting to an unsupported OpenSearch version (older than 2.0) now fails with a clear error message.
+
 ### Fixed
 
 * `orderExecuted` is now stored for every changelog entry (it was always empty before).
