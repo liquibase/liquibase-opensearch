@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+* `orderExecuted` is now stored for every changelog entry (it was always empty before).
+
 ## [2.1.0] - 2026-09-03
 
 ### Changed

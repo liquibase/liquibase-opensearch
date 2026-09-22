@@ -142,6 +142,8 @@ public class OpenSearchHistoryService extends AbstractNoSqlHistoryService<OpenSe
     @Override
     protected void markChangeSetRun(final ChangeSet changeSet, final ChangeSet.ExecType execType, final Integer nextSequenceValue) throws DatabaseException {
         final var ranChangeSet = new RanChangeSet(changeSet, execType, null, null);
+        // the constructor does not set this
+        ranChangeSet.setOrderExecuted(nextSequenceValue);
 
         try {
             this.getOpenSearchClient()

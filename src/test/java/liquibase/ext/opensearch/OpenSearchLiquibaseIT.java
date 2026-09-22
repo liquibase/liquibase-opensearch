@@ -1,8 +1,12 @@
 package liquibase.ext.opensearch;
 
+import liquibase.Scope;
 import liquibase.change.CheckSum;
+import liquibase.changelog.ChangeLogHistoryService;
+import liquibase.changelog.ChangeLogHistoryServiceFactory;
 import liquibase.changelog.ChangeSet;
 import liquibase.changelog.RanChangeSet;
+import liquibase.command.CommandResults;
 import liquibase.command.CommandScope;
 import liquibase.command.core.ClearChecksumsCommandStep;
 import liquibase.command.core.TagCommandStep;
@@ -14,9 +18,12 @@ import liquibase.report.UpdateReportParameters;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.Test;
 import org.opensearch.client.opensearch._types.Refresh;
+import org.opensearch.client.opensearch._types.SortOrder;
 import org.opensearch.client.opensearch._types.query_dsl.Query;
 
 import java.util.Date;
+import java.util.List;
+import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -150,6 +157,25 @@ class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
         assertThat(updateReport.getChangesetCount()).isEqualTo(0);
     }
 
+    /**
+     * Up to and including version 2.1.0 {@code orderExecuted} was never stored (the {@link RanChangeSet} constructor
+     * used does not set it).
+     */
+    @SneakyThrows
+    @Test
+    void itStoresOrderExecuted() {
+        assertThat(this.executedChangeSetCount(this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.multiple-steps.yaml"))).isEqualTo(2);
+        assertThat(this.storedOrderExecuted()).containsExactlyElementsOf(range(1, 2));
+
+        // re-running must not execute anything again
+        assertThat(this.executedChangeSetCount(this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.multiple-steps.yaml"))).isZero();
+        assertThat(this.loadRanChangeSets()).extracting(RanChangeSet::getOrderExecuted).containsExactlyElementsOf(range(1, 2));
+
+        // the sequence continues after the highest stored value
+        this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.yaml");
+        assertThat(this.storedOrderExecuted()).containsExactlyElementsOf(range(1, 3));
+    }
+
     @SneakyThrows
     @Test
     void itHandlesReRuns() {
@@ -235,6 +261,41 @@ class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
         assertThatThrownBy(
                 () -> this.doLiquibaseUpdate("liquibase/ext/changelog.unsupported-changetype.yaml")
         ).hasMessageContaining("Unknown type: liquibase.statement.core.CreateTableStatement");
+    }
+
+    private static List<Integer> range(final int fromInclusive, final int toInclusive) {
+        return IntStream.rangeClosed(fromInclusive, toInclusive).boxed().toList();
+    }
+
+    private static int executedChangeSetCount(final CommandResults results) {
+        return ((UpdateReportParameters) results.getResult("updateReport")).getChangesetInfo().getChangesetCount();
+    }
+
+    /**
+     * @return the changelog entries as seen by liquibase (freshly loaded through the history service).
+     */
+    private List<RanChangeSet> loadRanChangeSets() throws Exception {
+        final ChangeLogHistoryService historyService = Scope.getCurrentScope().getSingleton(ChangeLogHistoryServiceFactory.class).getChangeLogService(this.database);
+        // drop the list cached during the update so that the entries are really re-read from the index
+        historyService.reset();
+        return historyService.getRanChangeSets();
+    }
+
+    /**
+     * @return {@code orderExecuted} of all stored changelog entries, read directly from the index (independent of the
+     * history service).
+     */
+    private List<Integer> storedOrderExecuted() throws Exception {
+        final var index = this.database.getDatabaseChangeLogTableName();
+        this.getOpenSearchClient().indices().refresh(r -> r.index(index));
+        return this.getOpenSearchClient().search(s -> s
+                                .index(index)
+                                .size(100)
+                                .sort(so -> so.field(f -> f.field("orderExecuted").order(SortOrder.Asc))),
+                        RanChangeSet.class)
+                .hits().hits().stream()
+                .map(h -> h.source().getOrderExecuted())
+                .toList();
     }
 
 }

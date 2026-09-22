@@ -192,7 +192,9 @@ public abstract class AbstractNoSqlHistoryService<D extends AbstractNoSqlDatabas
 
         getDatabase().commit();
         if (this.ranChangeSetList != null) {
-            this.ranChangeSetList.add(new RanChangeSet(changeSet, execType, null, null));
+            final var ranChangeSet = new RanChangeSet(changeSet, execType, null, null);
+            ranChangeSet.setOrderExecuted(nextSequenceValue);
+            this.ranChangeSetList.add(ranChangeSet);
         }
     }
 
