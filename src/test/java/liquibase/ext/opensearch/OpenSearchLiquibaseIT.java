@@ -50,6 +50,12 @@ class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
 
     @SneakyThrows
     @Test
+    void itReturnsTheConnectionUserName() {
+        assertThat(this.connection.getConnectionUserName()).isEqualTo(this.container.getUsername());
+    }
+
+    @SneakyThrows
+    @Test
     void itCreatesTheChangelogAndLockIndices() {
         this.doLiquibaseUpdate("liquibase/ext/changelog.empty.yaml");
         assertThat(this.indexExists(this.database.getDatabaseChangeLogLockTableName())).isTrue();

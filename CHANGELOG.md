@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * `orderExecuted` is now stored for every changelog entry (it was always empty before).
 * `liquibase-opensearch` can now handle more than 10 entries in the changelog index (it now correctly accepts an
   unlimited amount of entries).
+* `OpenSearchConnection#getConnectionUserName` now returns the username (previously it always returned an empty string).
 
 ## [2.1.0] - 2026-09-03
 
