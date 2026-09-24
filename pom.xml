@@ -107,6 +107,12 @@
             <artifactId>httpclient5</artifactId>
             <version>5.6.4</version>
         </dependency>
+        <!-- required at runtime by httpclient5; must not be test-scoped, otherwise it's missing from the fat jar -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>2.0.19</version>
+        </dependency>
 
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -136,12 +142,6 @@
             <groupId>org.opensearch</groupId>
             <artifactId>opensearch-testcontainers</artifactId>
             <version>4.1.0</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>2.0.19</version>
             <scope>test</scope>
         </dependency>
         <dependency>
