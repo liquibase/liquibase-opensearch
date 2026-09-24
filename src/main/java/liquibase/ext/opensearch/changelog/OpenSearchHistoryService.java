@@ -166,12 +166,13 @@ public class OpenSearchHistoryService extends AbstractNoSqlHistoryService<OpenSe
     }
 
     @Override
-    public void clearAllCheckSums() throws DatabaseException {
+    protected void clearAllCheckSumsInRepository() throws DatabaseException {
         try {
             this.getOpenSearchClient()
                     .updateByQuery(r -> r.index(this.getDatabaseChangeLogTableName())
                             .script(s -> s.inline(i -> i.source("ctx._source.lastCheckSum = null")
-                                    .lang(ScriptLanguage.builder().builtin(BuiltinScriptLanguage.Painless).build()))));
+                                    .lang(ScriptLanguage.builder().builtin(BuiltinScriptLanguage.Painless).build())))
+                            .refresh(Refresh.True));
         } catch (IOException e) {
             throw new DatabaseException(e);
         }
@@ -228,6 +229,7 @@ public class OpenSearchHistoryService extends AbstractNoSqlHistoryService<OpenSe
                                     .lang(ScriptLanguage.builder().builtin(BuiltinScriptLanguage.Painless).build())
                                     .source("ctx._source.tag = params.newTag")
                                     .params("newTag", JsonData.of(tagString))))
+                            .refresh(Refresh.True)
             );
         } catch (final IOException e) {
             throw new DatabaseException(e);

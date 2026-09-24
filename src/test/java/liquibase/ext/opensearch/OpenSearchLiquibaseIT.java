@@ -314,6 +314,49 @@ class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
     }
 
     /**
+     * A tag must be visible to subsequent reads right away, not only after the next scheduled refresh of the index.
+     */
+    @SneakyThrows
+    @Test
+    void itCanReadATagRightAfterTagging() {
+        this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.multiple-steps.yaml");
+        this.disableAutoRefresh(this.database.getDatabaseChangeLogTableName());
+
+        this.tag("testTag");
+
+        assertThat(this.historyService().tagExists("testTag")).isTrue();
+    }
+
+    /**
+     * The checksums cached by the history service must be dropped when they are cleared.
+     */
+    @SneakyThrows
+    @Test
+    void itDropsCachedChecksumsWhenClearingThem() {
+        this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.multiple-steps.yaml");
+        assertThat(this.historyService().getRanChangeSets()).extracting(RanChangeSet::getLastCheckSum).doesNotContainNull();
+
+        this.clearChecksums();
+
+        assertThat(this.historyService().getRanChangeSets()).extracting(RanChangeSet::getLastCheckSum).containsOnlyNulls();
+    }
+
+    /**
+     * Cleared checksums must be visible to subsequent reads right away, not only after the next scheduled refresh of
+     * the index.
+     */
+    @SneakyThrows
+    @Test
+    void itCanReadClearedChecksumsRightAfterClearingThem() {
+        this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.multiple-steps.yaml");
+        this.disableAutoRefresh(this.database.getDatabaseChangeLogTableName());
+
+        this.clearChecksums();
+
+        assertThat(this.loadRanChangeSets()).isNotEmpty().extracting(RanChangeSet::getLastCheckSum).containsOnlyNulls();
+    }
+
+    /**
      * Entries executed within the same update run can share the same {@code dateExecuted}; the last one is identified
      * by {@code orderExecuted}.
      */
@@ -372,10 +415,33 @@ class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
      * @return the changelog entries as seen by liquibase (freshly loaded through the history service).
      */
     private List<RanChangeSet> loadRanChangeSets() throws Exception {
-        final ChangeLogHistoryService historyService = Scope.getCurrentScope().getSingleton(ChangeLogHistoryServiceFactory.class).getChangeLogService(this.database);
+        final ChangeLogHistoryService historyService = this.historyService();
         // drop the list cached during the update so that the entries are really re-read from the index
         historyService.reset();
         return historyService.getRanChangeSets();
+    }
+
+    /**
+     * @return the history service liquibase uses for {@link #database} (including its in-memory cache).
+     */
+    private ChangeLogHistoryService historyService() {
+        return Scope.getCurrentScope().getSingleton(ChangeLogHistoryServiceFactory.class).getChangeLogService(this.database);
+    }
+
+    private void clearChecksums() throws Exception {
+        new CommandScope(ClearChecksumsCommandStep.COMMAND_NAME)
+                .addArgumentValue(DbUrlConnectionArgumentsCommandStep.DATABASE_ARG, this.database)
+                .execute();
+    }
+
+    /**
+     * Disables the scheduled refresh of the index so that changes only become visible to searches if they explicitly
+     * refresh the index.
+     */
+    private void disableAutoRefresh(final String index) throws Exception {
+        this.getOpenSearchClient().indices().putSettings(p -> p
+                .index(index)
+                .settings(s -> s.refreshInterval(t -> t.time("-1"))));
     }
 
     /**
