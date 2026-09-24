@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * `liquibase-opensearch` can now handle more than 10 entries in the changelog index (it now correctly accepts an
   unlimited amount of entries).
 * `OpenSearchConnection#getConnectionUserName` now returns the username (previously it always returned an empty string).
+* `tag` now tags the most recently executed changeset, determined by `orderExecuted`. Previously it went by
+  `dateExecuted`, so changesets executed in the same update run could tie and the tag could land on the wrong one.
 
 ## [2.1.0] - 2026-09-03
 
