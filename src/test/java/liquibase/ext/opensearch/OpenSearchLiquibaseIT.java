@@ -21,9 +21,11 @@ import org.opensearch.client.opensearch._types.Refresh;
 import org.opensearch.client.opensearch._types.SortOrder;
 import org.opensearch.client.opensearch._types.query_dsl.Query;
 import org.opensearch.client.opensearch.core.BulkRequest;
+import org.opensearch.client.opensearch.core.search.Hit;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -311,6 +313,38 @@ class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
         assertThat(countAfterTagWithId2).isEqualTo(1);
     }
 
+    /**
+     * Entries executed within the same update run can share the same {@code dateExecuted}; the last one is identified
+     * by {@code orderExecuted}.
+     */
+    @SneakyThrows
+    @Test
+    void itTagsTheEntryWithTheHighestOrderExecuted() {
+        final var seeded = 20;
+        this.doLiquibaseUpdate("liquibase/ext/changelog.empty.yaml");
+        this.seedRanChangeSets(seeded, false);
+
+        this.tag("testTag");
+
+        assertThat(this.taggedEntries("testTag")).extracting(RanChangeSet::getOrderExecuted).containsExactly(seeded);
+    }
+
+    /**
+     * Entries written by versions up to and including 2.1.0 have no {@code orderExecuted}; they must never win over
+     * entries which have one, independent of their {@code dateExecuted}.
+     */
+    @SneakyThrows
+    @Test
+    void itDoesNotTagLegacyEntriesWithoutOrderExecuted() {
+        this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.multiple-steps.yaml");
+        // seeded after the update => newer dateExecuted than the real entries
+        this.seedRanChangeSets(5, true);
+
+        this.tag("testTag");
+
+        assertThat(this.taggedEntries("testTag")).extracting(RanChangeSet::getOrderExecuted).containsExactly(2);
+    }
+
     @SneakyThrows
     @Test
     void itSupportsAlternativeContentTypes() {
@@ -357,7 +391,31 @@ class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
                                 .sort(so -> so.field(f -> f.field("orderExecuted").order(SortOrder.Asc))),
                         RanChangeSet.class)
                 .hits().hits().stream()
-                .map(h -> h.source().getOrderExecuted())
+                .map(Hit::source)
+                .map(RanChangeSet::getOrderExecuted)
+                .toList();
+    }
+
+    private void tag(final String tag) throws Exception {
+        new CommandScope(TagCommandStep.COMMAND_NAME)
+                .addArgumentValue(DbUrlConnectionArgumentsCommandStep.DATABASE_ARG, this.database)
+                .addArgumentValue(TagCommandStep.TAG_ARG, tag)
+                .execute();
+    }
+
+    /**
+     * @return all stored changelog entries carrying the given tag, read directly from the index.
+     */
+    private List<RanChangeSet> taggedEntries(final String tag) throws Exception {
+        final var index = this.database.getDatabaseChangeLogTableName();
+        this.getOpenSearchClient().indices().refresh(r -> r.index(index));
+        return this.getOpenSearchClient().search(s -> s
+                                .index(index)
+                                .size(100)
+                                .query(q -> q.match(m -> m.field("tag").query(v -> v.stringValue(tag)))),
+                        RanChangeSet.class)
+                .hits().hits().stream()
+                .map(Hit::source)
                 .toList();
     }
 

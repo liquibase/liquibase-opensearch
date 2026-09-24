@@ -202,6 +202,10 @@ public class OpenSearchHistoryService extends AbstractNoSqlHistoryService<OpenSe
             final var response = this.getOpenSearchClient().search(
                     s -> s
                             .index(this.getDatabaseChangeLogTableName())
+                            // dateExecuted can tie within one update run, orderExecuted can't. entries written by
+                            // versions up to and including 2.1.0 have no orderExecuted and are older than any entry
+                            // with a value, thus they must sort last.
+                            .sort(so -> so.field(f -> f.field("orderExecuted").order(SortOrder.Desc).missing(FieldValue.of("_last"))))
                             .sort(so -> so.field(f -> f.field("dateExecuted").order(SortOrder.Desc)))
                             .size(1),
                     RanChangeSet.class
