@@ -396,6 +396,20 @@ class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
         assertThat(this.getDocumentCount("testindex")).isEqualTo(2);
     }
 
+    @SneakyThrows
+    @Test
+    void itExecutesADeleteRequestWithoutBody() {
+        assertThat(this.executedChangeSetCount(this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.delete.yaml"))).isEqualTo(2);
+        assertThat(this.indexExists("testindex-delete")).isFalse();
+    }
+
+    @SneakyThrows
+    @Test
+    void itExecutesADeleteRequestWithoutBodyWithXMLChangelog() {
+        assertThat(this.executedChangeSetCount(this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.delete.xml"))).isEqualTo(2);
+        assertThat(this.indexExists("xmltestindex-delete")).isFalse();
+    }
+
     @Test
     void itFailsOnUnsupportedChangeTypes() {
         assertThatThrownBy(

@@ -54,7 +54,7 @@ public class HttpRequestStatement extends AbstractOpenSearchStatement implements
         final var request = Requests.builder()
                 .endpoint(this.getPath())
                 .method(this.getMethod())
-                .body(Bodies.json(this.getBody()))
+                .body(Bodies.json(Optional.ofNullable(this.getBody()).orElse("")))
                 .build();
 
         try (final var response = httpClient.execute(request)) {

@@ -1,0 +1,25 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1
+      author: test
+      changes:
+        - httpRequest:
+            method: PUT
+            path: /testindex-delete
+            body: >
+              {
+                "mappings": {
+                  "properties": {
+                    "testfield": {
+                      "type": "text"
+                    }
+                  }
+                }
+              }
+  - changeSet:
+      id: 2
+      author: test
+      changes:
+        - httpRequest:
+            method: DELETE
+            path: /testindex-delete
