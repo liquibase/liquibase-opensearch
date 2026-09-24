@@ -9,6 +9,7 @@ import liquibase.database.Database;
 import liquibase.exception.DatabaseException;
 import liquibase.ext.opensearch.database.OpenSearchConnection;
 import liquibase.ext.opensearch.database.OpenSearchLiquibaseDatabase;
+import liquibase.ext.opensearch.database.OpenSearchSearchHelper;
 import liquibase.logging.Logger;
 import liquibase.nosql.changelog.AbstractNoSqlHistoryService;
 import lombok.AllArgsConstructor;
@@ -21,14 +22,11 @@ import org.opensearch.client.opensearch._types.Refresh;
 import org.opensearch.client.opensearch._types.ScriptLanguage;
 import org.opensearch.client.opensearch._types.SortOrder;
 import org.opensearch.client.opensearch.core.SearchRequest;
-import org.opensearch.client.opensearch.core.search.Hit;
 import org.opensearch.client.opensearch.indices.PutMappingRequest;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 public class OpenSearchHistoryService extends AbstractNoSqlHistoryService<OpenSearchLiquibaseDatabase> {
 
@@ -113,11 +111,10 @@ public class OpenSearchHistoryService extends AbstractNoSqlHistoryService<OpenSe
     @Override
     protected List<RanChangeSet> queryRanChangeSets() throws DatabaseException {
         try {
-            final var response = this.getOpenSearchClient()
-                    .search(s -> s.index(this.getDatabaseChangeLogTableName()), RanChangeSet.class);
-            return response.hits().hits().stream()
-                    .map(Hit::source)
-                    .collect(Collectors.toCollection(ArrayList::new)); // do not use toList directly as it returns an immutable list!
+            // note: must be a mutable list!
+            // entries written by versions up to and including 2.1.0 have no orderExecuted, they sort first (they are
+            // older than any entry with a value) and among themselves by dateExecuted.
+            return OpenSearchSearchHelper.searchAll(this.getOpenSearchClient(), this.getDatabaseChangeLogTableName(), RanChangeSet.class, "orderExecuted", "dateExecuted");
         } catch (final IOException e) {
             throw new DatabaseException(e);
         }
@@ -142,6 +139,8 @@ public class OpenSearchHistoryService extends AbstractNoSqlHistoryService<OpenSe
     @Override
     protected void markChangeSetRun(final ChangeSet changeSet, final ChangeSet.ExecType execType, final Integer nextSequenceValue) throws DatabaseException {
         final var ranChangeSet = new RanChangeSet(changeSet, execType, null, null);
+        // the constructor does not set this
+        ranChangeSet.setOrderExecuted(nextSequenceValue);
 
         try {
             this.getOpenSearchClient()
@@ -233,7 +232,11 @@ public class OpenSearchHistoryService extends AbstractNoSqlHistoryService<OpenSe
 
     @Override
     protected long countRanChangeSets() throws DatabaseException {
-        return this.queryRanChangeSets().size();
+        try {
+            return this.getOpenSearchClient().count(c -> c.index(this.getDatabaseChangeLogTableName())).count();
+        } catch (final IOException e) {
+            throw new DatabaseException(e);
+        }
     }
 
     @Override

@@ -145,7 +145,7 @@ public class OpenSearchConnection extends AbstractNoSqlConnection {
 
     @Override
     public String getConnectionUserName() {
-        return this.connectionProperties.map(p -> p.getProperty("username")).orElse("");
+        return this.connectionProperties.map(p -> p.getProperty("user")).orElse("");
     }
 
     @Override
