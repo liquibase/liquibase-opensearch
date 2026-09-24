@@ -21,9 +21,11 @@ import org.opensearch.client.opensearch._types.Refresh;
 import org.opensearch.client.opensearch._types.SortOrder;
 import org.opensearch.client.opensearch._types.query_dsl.Query;
 import org.opensearch.client.opensearch.core.BulkRequest;
+import org.opensearch.client.opensearch.core.search.Hit;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -52,6 +54,25 @@ class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
     @Test
     void itReturnsTheConnectionUserName() {
         assertThat(this.connection.getConnectionUserName()).isEqualTo(this.container.getUsername());
+    }
+
+    @SneakyThrows
+    @Test
+    void itClosesTheTransportWhenClosingTheConnection() {
+        final var client = this.getOpenSearchClient();
+        this.connection.close();
+
+        assertThat(this.connection.isClosed()).isTrue();
+        assertThatThrownBy(client::info).hasMessageContaining("shut down");
+    }
+
+    @SneakyThrows
+    @Test
+    void itCanCloseTheConnectionMultipleTimes() {
+        this.connection.close();
+        this.connection.close();
+
+        assertThat(this.connection.isClosed()).isTrue();
     }
 
     @SneakyThrows
@@ -128,7 +149,7 @@ class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
                 .index(r -> r.index("databasechangelog")
                         .id(ranChangeSet.getId()) // use getId instead of toString to simulate old behaviour
                         .document(ranChangeSet)
-                        .refresh(Refresh.WaitFor));
+                        .refresh(Refresh.True));
 
         // now run the changelog - the index is not supposed to be created
         final var updateResult = this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.yaml");
@@ -311,12 +332,101 @@ class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
         assertThat(countAfterTagWithId2).isEqualTo(1);
     }
 
+    /**
+     * A tag must be visible to subsequent reads right away, not only after the next scheduled refresh of the index.
+     */
+    @SneakyThrows
+    @Test
+    void itCanReadATagRightAfterTagging() {
+        this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.multiple-steps.yaml");
+        this.disableAutoRefresh(this.database.getDatabaseChangeLogTableName());
+
+        this.tag("testTag");
+
+        assertThat(this.historyService().tagExists("testTag")).isTrue();
+    }
+
+    /**
+     * The checksums cached by the history service must be dropped when they are cleared.
+     */
+    @SneakyThrows
+    @Test
+    void itDropsCachedChecksumsWhenClearingThem() {
+        this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.multiple-steps.yaml");
+        assertThat(this.historyService().getRanChangeSets()).extracting(RanChangeSet::getLastCheckSum).doesNotContainNull();
+
+        this.clearChecksums();
+
+        assertThat(this.historyService().getRanChangeSets()).extracting(RanChangeSet::getLastCheckSum).containsOnlyNulls();
+    }
+
+    /**
+     * Cleared checksums must be visible to subsequent reads right away, not only after the next scheduled refresh of
+     * the index.
+     */
+    @SneakyThrows
+    @Test
+    void itCanReadClearedChecksumsRightAfterClearingThem() {
+        this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.multiple-steps.yaml");
+        this.disableAutoRefresh(this.database.getDatabaseChangeLogTableName());
+
+        this.clearChecksums();
+
+        assertThat(this.loadRanChangeSets()).isNotEmpty().extracting(RanChangeSet::getLastCheckSum).containsOnlyNulls();
+    }
+
+    /**
+     * Entries executed within the same update run can share the same {@code dateExecuted}; the last one is identified
+     * by {@code orderExecuted}.
+     */
+    @SneakyThrows
+    @Test
+    void itTagsTheEntryWithTheHighestOrderExecuted() {
+        final var seeded = 20;
+        this.doLiquibaseUpdate("liquibase/ext/changelog.empty.yaml");
+        this.seedRanChangeSets(seeded, false);
+
+        this.tag("testTag");
+
+        assertThat(this.taggedEntries("testTag")).extracting(RanChangeSet::getOrderExecuted).containsExactly(seeded);
+    }
+
+    /**
+     * Entries written by versions up to and including 2.1.0 have no {@code orderExecuted}; they must never win over
+     * entries which have one, independent of their {@code dateExecuted}.
+     */
+    @SneakyThrows
+    @Test
+    void itDoesNotTagLegacyEntriesWithoutOrderExecuted() {
+        this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.multiple-steps.yaml");
+        // seeded after the update => newer dateExecuted than the real entries
+        this.seedRanChangeSets(5, true);
+
+        this.tag("testTag");
+
+        assertThat(this.taggedEntries("testTag")).extracting(RanChangeSet::getOrderExecuted).containsExactly(2);
+    }
+
     @SneakyThrows
     @Test
     void itSupportsAlternativeContentTypes() {
         this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.bulk.yaml");
         assertThat(this.indexExists("testindex")).isTrue();
         assertThat(this.getDocumentCount("testindex")).isEqualTo(2);
+    }
+
+    @SneakyThrows
+    @Test
+    void itExecutesADeleteRequestWithoutBody() {
+        assertThat(this.executedChangeSetCount(this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.delete.yaml"))).isEqualTo(2);
+        assertThat(this.indexExists("testindex-delete")).isFalse();
+    }
+
+    @SneakyThrows
+    @Test
+    void itExecutesADeleteRequestWithoutBodyWithXMLChangelog() {
+        assertThat(this.executedChangeSetCount(this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.delete.xml"))).isEqualTo(2);
+        assertThat(this.indexExists("xmltestindex-delete")).isFalse();
     }
 
     @Test
@@ -338,10 +448,33 @@ class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
      * @return the changelog entries as seen by liquibase (freshly loaded through the history service).
      */
     private List<RanChangeSet> loadRanChangeSets() throws Exception {
-        final ChangeLogHistoryService historyService = Scope.getCurrentScope().getSingleton(ChangeLogHistoryServiceFactory.class).getChangeLogService(this.database);
+        final ChangeLogHistoryService historyService = this.historyService();
         // drop the list cached during the update so that the entries are really re-read from the index
         historyService.reset();
         return historyService.getRanChangeSets();
+    }
+
+    /**
+     * @return the history service liquibase uses for {@link #database} (including its in-memory cache).
+     */
+    private ChangeLogHistoryService historyService() {
+        return Scope.getCurrentScope().getSingleton(ChangeLogHistoryServiceFactory.class).getChangeLogService(this.database);
+    }
+
+    private void clearChecksums() throws Exception {
+        new CommandScope(ClearChecksumsCommandStep.COMMAND_NAME)
+                .addArgumentValue(DbUrlConnectionArgumentsCommandStep.DATABASE_ARG, this.database)
+                .execute();
+    }
+
+    /**
+     * Disables the scheduled refresh of the index so that changes only become visible to searches if they explicitly
+     * refresh the index.
+     */
+    private void disableAutoRefresh(final String index) throws Exception {
+        this.getOpenSearchClient().indices().putSettings(p -> p
+                .index(index)
+                .settings(s -> s.refreshInterval(t -> t.time("-1"))));
     }
 
     /**
@@ -357,7 +490,31 @@ class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
                                 .sort(so -> so.field(f -> f.field("orderExecuted").order(SortOrder.Asc))),
                         RanChangeSet.class)
                 .hits().hits().stream()
-                .map(h -> h.source().getOrderExecuted())
+                .map(Hit::source)
+                .map(RanChangeSet::getOrderExecuted)
+                .toList();
+    }
+
+    private void tag(final String tag) throws Exception {
+        new CommandScope(TagCommandStep.COMMAND_NAME)
+                .addArgumentValue(DbUrlConnectionArgumentsCommandStep.DATABASE_ARG, this.database)
+                .addArgumentValue(TagCommandStep.TAG_ARG, tag)
+                .execute();
+    }
+
+    /**
+     * @return all stored changelog entries carrying the given tag, read directly from the index.
+     */
+    private List<RanChangeSet> taggedEntries(final String tag) throws Exception {
+        final var index = this.database.getDatabaseChangeLogTableName();
+        this.getOpenSearchClient().indices().refresh(r -> r.index(index));
+        return this.getOpenSearchClient().search(s -> s
+                                .index(index)
+                                .size(100)
+                                .query(q -> q.match(m -> m.field("tag").query(v -> v.stringValue(tag)))),
+                        RanChangeSet.class)
+                .hits().hits().stream()
+                .map(Hit::source)
                 .toList();
     }
 

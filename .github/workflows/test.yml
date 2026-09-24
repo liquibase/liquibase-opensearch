@@ -58,9 +58,11 @@ jobs:
       - name: Install Liquibase CLI
         run: |
           set -euo pipefail
-          curl -LO https://github.com/liquibase/liquibase/releases/download/v4.33.0/liquibase-4.33.0.tar.gz
+          LIQUIBASE_VERSION=$(./mvnw -q help:evaluate -Dexpression=liquibase.version -DforceStdout)
+          echo "Installing Liquibase CLI ${LIQUIBASE_VERSION}"
+          curl -fLO "https://github.com/liquibase/liquibase/releases/download/v${LIQUIBASE_VERSION}/liquibase-${LIQUIBASE_VERSION}.tar.gz"
           mkdir liquibase
-          tar -xzf liquibase-4.33.0.tar.gz -C liquibase
+          tar -xzf "liquibase-${LIQUIBASE_VERSION}.tar.gz" -C liquibase
 
       - name: Build fat jar
         run: ./mvnw clean package

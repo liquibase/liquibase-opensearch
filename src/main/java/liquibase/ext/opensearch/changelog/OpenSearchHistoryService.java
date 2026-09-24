@@ -147,7 +147,7 @@ public class OpenSearchHistoryService extends AbstractNoSqlHistoryService<OpenSe
                     .index(r -> r.index(this.getDatabaseChangeLogTableName())
                             .id(ranChangeSet.toString())
                             .document(ranChangeSet)
-                            .refresh(Refresh.WaitFor));
+                            .refresh(Refresh.True));
         } catch (final IOException e) {
             throw new DatabaseException(e);
         }
@@ -159,19 +159,20 @@ public class OpenSearchHistoryService extends AbstractNoSqlHistoryService<OpenSe
             this.getOpenSearchClient()
                     .delete(r -> r.index(this.getDatabaseChangeLogTableName())
                             .id(changeSet.toString())
-                            .refresh(Refresh.WaitFor));
+                            .refresh(Refresh.True));
         } catch (final IOException e) {
             throw new DatabaseException(e);
         }
     }
 
     @Override
-    public void clearAllCheckSums() throws DatabaseException {
+    protected void clearAllCheckSumsInRepository() throws DatabaseException {
         try {
             this.getOpenSearchClient()
                     .updateByQuery(r -> r.index(this.getDatabaseChangeLogTableName())
                             .script(s -> s.inline(i -> i.source("ctx._source.lastCheckSum = null")
-                                    .lang(ScriptLanguage.builder().builtin(BuiltinScriptLanguage.Painless).build()))));
+                                    .lang(ScriptLanguage.builder().builtin(BuiltinScriptLanguage.Painless).build())))
+                            .refresh(Refresh.True));
         } catch (IOException e) {
             throw new DatabaseException(e);
         }
@@ -202,6 +203,10 @@ public class OpenSearchHistoryService extends AbstractNoSqlHistoryService<OpenSe
             final var response = this.getOpenSearchClient().search(
                     s -> s
                             .index(this.getDatabaseChangeLogTableName())
+                            // dateExecuted can tie within one update run, orderExecuted can't. entries written by
+                            // versions up to and including 2.1.0 have no orderExecuted and are older than any entry
+                            // with a value, thus they must sort last.
+                            .sort(so -> so.field(f -> f.field("orderExecuted").order(SortOrder.Desc).missing(FieldValue.of("_last"))))
                             .sort(so -> so.field(f -> f.field("dateExecuted").order(SortOrder.Desc)))
                             .size(1),
                     RanChangeSet.class
@@ -224,6 +229,7 @@ public class OpenSearchHistoryService extends AbstractNoSqlHistoryService<OpenSe
                                     .lang(ScriptLanguage.builder().builtin(BuiltinScriptLanguage.Painless).build())
                                     .source("ctx._source.tag = params.newTag")
                                     .params("newTag", JsonData.of(tagString))))
+                            .refresh(Refresh.True)
             );
         } catch (final IOException e) {
             throw new DatabaseException(e);
@@ -257,7 +263,7 @@ public class OpenSearchHistoryService extends AbstractNoSqlHistoryService<OpenSe
                                     .index(this.getDatabaseChangeLogTableName())
                                     .id(changeSet.toString())
                                     .doc(new CheckSumObj(checkSum))
-                                    .refresh(Refresh.WaitFor)
+                                    .refresh(Refresh.True)
                             , RanChangeSet.class);
         } catch (final IOException e) {
             throw new DatabaseException(e);

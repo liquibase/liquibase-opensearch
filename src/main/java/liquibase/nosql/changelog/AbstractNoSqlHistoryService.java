@@ -250,6 +250,15 @@ public abstract class AbstractNoSqlHistoryService<D extends AbstractNoSqlDatabas
     }
 
     @Override
+    public void clearAllCheckSums() throws DatabaseException {
+        clearAllCheckSumsInRepository();
+
+        // the cached entries still carry the old checksums
+        this.ranChangeSetList = null;
+        Scope.getCurrentScope().getSingleton(FastCheckService.class).clearCache();
+    }
+
+    @Override
     public void destroy() {
 
         try {
@@ -286,6 +295,8 @@ public abstract class AbstractNoSqlHistoryService<D extends AbstractNoSqlDatabas
     protected abstract void removeRanChangeSet(ChangeSet changeSet) throws DatabaseException;
 
     protected abstract long countTags(String tag) throws DatabaseException;
+
+    protected abstract void clearAllCheckSumsInRepository() throws DatabaseException;
 
     protected abstract void tagLast(String tagString) throws DatabaseException;
 

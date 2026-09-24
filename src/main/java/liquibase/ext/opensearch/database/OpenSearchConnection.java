@@ -4,6 +4,7 @@ import liquibase.Scope;
 import liquibase.exception.DatabaseException;
 import liquibase.logging.Logger;
 import liquibase.nosql.database.AbstractNoSqlConnection;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -22,6 +23,7 @@ import org.apache.hc.core5.ssl.SSLContextBuilder;
 import org.opensearch.client.json.jackson3.JacksonJsonpMapper;
 import org.opensearch.client.opensearch.OpenSearchClient;
 import org.opensearch.client.opensearch.core.InfoResponse;
+import org.opensearch.client.transport.OpenSearchTransport;
 import org.opensearch.client.transport.httpclient5.ApacheHttpClient5TransportBuilder;
 
 import javax.net.ssl.SSLContext;
@@ -48,6 +50,10 @@ public class OpenSearchConnection extends AbstractNoSqlConnection {
     private final Logger log = Scope.getCurrentScope().getLog(getClass());
 
     private OpenSearchClient openSearchClient;
+    ///  transport created by this connection (and thus owned by it). `null` if an existing `OpenSearchClient` is passed instead
+    @Getter(AccessLevel.NONE)
+    @Setter(AccessLevel.NONE)
+    private OpenSearchTransport transport;
     private Optional<InfoResponse> openSearchInfo = Optional.empty();
 
     ///  URIs used to connect to OpenSearch. not present if an existing `OpenSearchClient` is passed instead
@@ -58,6 +64,9 @@ public class OpenSearchConnection extends AbstractNoSqlConnection {
     /**
      * Construct a new liquibase connection with an existing OpenSearchClient. Use this when you wish to re-use
      * an existing connection and/or use special client configuration, e.g. authentication other than basic auth.
+     * <p>
+     * The caller retains ownership of the client: {@link #close()} does not close its transport, the caller has to do
+     * this once it no longer needs the client.
      *
      * @param openSearchClient a fully configured client connected to an OpenSearch cluster.
      */
@@ -103,10 +112,21 @@ public class OpenSearchConnection extends AbstractNoSqlConnection {
     }
 
     @Override
-    public void close() {
+    public void close() throws DatabaseException {
+        final var ownedTransport = this.transport;
+        this.transport = null;
         this.openSearchClient = null;
+        this.openSearchInfo = Optional.empty();
         this.connectionProperties = Optional.empty();
         this.uris = Optional.empty();
+
+        if (ownedTransport != null) {
+            try {
+                ownedTransport.close();
+            } catch (final IOException e) {
+                throw new DatabaseException("Could not close the connection to OpenSearch", e);
+            }
+        }
     }
 
     @Override
@@ -191,6 +211,7 @@ public class OpenSearchConnection extends AbstractNoSqlConnection {
                 .setMapper(new JacksonJsonpMapper())
                 .build();
 
+        this.transport = transport;
         this.openSearchClient = new OpenSearchClient(transport);
     }
 
