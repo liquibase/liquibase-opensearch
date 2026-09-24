@@ -105,7 +105,7 @@ public class OpenSearchLockService extends AbstractNoSqlLockService<OpenSearchLi
                     .create(r -> r.index(this.getDatabaseChangeLogLockTableName())
                             .id(String.valueOf(LOCK_ENTRY_ID))
                             .document(lockEntry)
-                            .refresh(Refresh.WaitFor));
+                            .refresh(Refresh.True));
         } catch (final ResponseException e) {
             if (e.status() == HttpStatus.SC_CONFLICT) {
                 return false;
@@ -123,7 +123,7 @@ public class OpenSearchLockService extends AbstractNoSqlLockService<OpenSearchLi
             this.getOpenSearchClient()
                     .delete(r -> r.index(this.getDatabaseChangeLogLockTableName())
                             .id(String.valueOf(LOCK_ENTRY_ID))
-                            .refresh(Refresh.WaitFor));
+                            .refresh(Refresh.True));
         } catch (final IOException e) {
             throw new DatabaseException(e);
         }

@@ -147,7 +147,7 @@ public class OpenSearchHistoryService extends AbstractNoSqlHistoryService<OpenSe
                     .index(r -> r.index(this.getDatabaseChangeLogTableName())
                             .id(ranChangeSet.toString())
                             .document(ranChangeSet)
-                            .refresh(Refresh.WaitFor));
+                            .refresh(Refresh.True));
         } catch (final IOException e) {
             throw new DatabaseException(e);
         }
@@ -159,7 +159,7 @@ public class OpenSearchHistoryService extends AbstractNoSqlHistoryService<OpenSe
             this.getOpenSearchClient()
                     .delete(r -> r.index(this.getDatabaseChangeLogTableName())
                             .id(changeSet.toString())
-                            .refresh(Refresh.WaitFor));
+                            .refresh(Refresh.True));
         } catch (final IOException e) {
             throw new DatabaseException(e);
         }
@@ -261,7 +261,7 @@ public class OpenSearchHistoryService extends AbstractNoSqlHistoryService<OpenSe
                                     .index(this.getDatabaseChangeLogTableName())
                                     .id(changeSet.toString())
                                     .doc(new CheckSumObj(checkSum))
-                                    .refresh(Refresh.WaitFor)
+                                    .refresh(Refresh.True)
                             , RanChangeSet.class);
         } catch (final IOException e) {
             throw new DatabaseException(e);
