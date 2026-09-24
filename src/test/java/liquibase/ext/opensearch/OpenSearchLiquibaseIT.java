@@ -130,7 +130,7 @@ class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
                 .index(r -> r.index("databasechangelog")
                         .id(ranChangeSet.getId()) // use getId instead of toString to simulate old behaviour
                         .document(ranChangeSet)
-                        .refresh(Refresh.WaitFor));
+                        .refresh(Refresh.True));
 
         // now run the changelog - the index is not supposed to be created
         final var updateResult = this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.yaml");

@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * `OpenSearchConnection#getConnectionUserName` now returns the username (previously it always returned an empty string).
 * `tag` now tags the most recently executed changeset, determined by `orderExecuted`. Previously it went by
   `dateExecuted`, so changesets executed in the same update run could tie and the tag could land on the wrong one.
+* Writes to the changelog and lock indices now force a refresh (`refresh=true`) instead of waiting for the next
+  scheduled one (`refresh=wait_for`). Previously, if `index.refresh_interval` was set to `-1` on these indices (e.g. via
+  an index template), every write blocked until something else triggered a refresh. With the default settings, each
+  write also waited up to 1 second.
 
 ## [2.1.0] - 2026-09-03
 
