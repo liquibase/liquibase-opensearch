@@ -28,6 +28,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Closing an `OpenSearchConnection` now closes the underlying transport. Previously its HTTP connections and I/O threads
   leaked, making the thread count grow in long-running applications which open multiple connections. Connections
   created with a custom `OpenSearchClient` are not affected: the caller owns its transport and has to close it.
+* The fat jar now includes `slf4j-api`, which `httpclient5` needs at runtime. Previously it was missing, so the
+  extension failed with `NoClassDefFoundError: org/slf4j/LoggerFactory` in the Liquibase 5.x CLI (the 4.x CLI happened
+  to ship slf4j itself).
 
 ## [2.1.0] - 2026-09-03
 
