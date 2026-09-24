@@ -58,7 +58,15 @@ Some APIs - like the bulk API - requires a different content type, this can be s
               { "testfield": "b" }
 ```
 
-`contentType` is optional, the default is `application/json`. All other fields are mandatory.
+`contentType` is optional, the default is `application/json`. `body` is optional, if it is omitted an empty body is
+sent (e.g. for `DELETE` requests):
+```yaml
+        - httpRequest:
+            method: DELETE
+            path: /testindex
+```
+
+All other fields are mandatory.
 
 ### With the Liquibase CLI
 

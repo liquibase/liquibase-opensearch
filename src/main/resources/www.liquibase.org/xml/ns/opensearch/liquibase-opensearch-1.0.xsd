@@ -26,7 +26,7 @@
                 <xsd:element name="method" type="httpMethods" />
                 <xsd:element name="contentType" type="xsd:string" minOccurs="0" />
                 <xsd:element name="path" type="xsd:string" />
-                <xsd:element name="body" type="xsd:string" />
+                <xsd:element name="body" type="xsd:string" minOccurs="0" />
             </xsd:all>
         </xsd:complexType>
     </xsd:element>

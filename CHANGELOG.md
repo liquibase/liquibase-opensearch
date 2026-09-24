@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `rollback` issued right afterwards in the same JVM might not see the tag.
 * `clear-checksums` now also drops the checksums cached in memory. Previously, subsequent commands in the same JVM
   still saw the old checksums.
+* `httpRequest`: `body` is now optional, if it is omitted an empty body is sent. Previously changes without a `body`
+  (e.g. `DELETE` requests) failed with a `NullPointerException` at execution time.
 
 ## [2.1.0] - 2026-09-03
 
