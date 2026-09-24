@@ -25,6 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   still saw the old checksums.
 * `httpRequest`: `body` is now optional, if it is omitted an empty body is sent. Previously changes without a `body`
   (e.g. `DELETE` requests) failed with a `NullPointerException` at execution time.
+* Closing an `OpenSearchConnection` now closes the underlying transport. Previously its HTTP connections and I/O threads
+  leaked, making the thread count grow in long-running applications which open multiple connections. Connections
+  created with a custom `OpenSearchClient` are not affected: the caller owns its transport and has to close it.
 
 ## [2.1.0] - 2026-09-03
 
