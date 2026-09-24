@@ -58,6 +58,25 @@ class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
 
     @SneakyThrows
     @Test
+    void itClosesTheTransportWhenClosingTheConnection() {
+        final var client = this.getOpenSearchClient();
+        this.connection.close();
+
+        assertThat(this.connection.isClosed()).isTrue();
+        assertThatThrownBy(client::info).hasMessageContaining("shut down");
+    }
+
+    @SneakyThrows
+    @Test
+    void itCanCloseTheConnectionMultipleTimes() {
+        this.connection.close();
+        this.connection.close();
+
+        assertThat(this.connection.isClosed()).isTrue();
+    }
+
+    @SneakyThrows
+    @Test
     void itCreatesTheChangelogAndLockIndices() {
         this.doLiquibaseUpdate("liquibase/ext/changelog.empty.yaml");
         assertThat(this.indexExists(this.database.getDatabaseChangeLogLockTableName())).isTrue();

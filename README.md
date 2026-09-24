@@ -121,18 +121,26 @@ If you wish to use any other form of authentication
 or have special requirements for the connection (e.g. not validate the TLS certificates) you have to [construct your own
 `OpenSearchClient`][custom-client] and pass that to `OpenSearchConnection`. See [CustomOpenSearchClientLiquibaseIT] for a full example.
 
+You retain ownership of such a client: closing the `OpenSearchConnection` (or the `OpenSearchLiquibaseDatabase`) does
+not close it. Once you no longer need the client, close the transport you created it with (`OpenSearchTransport#close()`),
+otherwise its HTTP connections and I/O threads keep running. Connections opened by liquibase from a URL close their
+transport when the connection is closed.
+
 ```java
-void main() {
+void main() throws IOException {
     final var changeLogFile = "path/to/changelog.yaml";
 
-    final var connection = new OpenSearchConnection(openSearchClient);
-    final var database = new OpenSearchLiquibaseDatabase(connection);
+    try (final var transport = buildYourTransport()) {
+        final var openSearchClient = new OpenSearchClient(transport);
+        final var connection = new OpenSearchConnection(openSearchClient);
+        final var database = new OpenSearchLiquibaseDatabase(connection);
 
-    // execute the migration
-    new CommandScope(UpdateCommandStep.COMMAND_NAME)
-            .addArgumentValue(DbUrlConnectionArgumentsCommandStep.DATABASE_ARG, database)
-            .addArgumentValue(UpdateCommandStep.CHANGELOG_FILE_ARG, changeLogFile)
-            .execute();
+        // execute the migration
+        new CommandScope(UpdateCommandStep.COMMAND_NAME)
+                .addArgumentValue(DbUrlConnectionArgumentsCommandStep.DATABASE_ARG, database)
+                .addArgumentValue(UpdateCommandStep.CHANGELOG_FILE_ARG, changeLogFile)
+                .execute();
+    }
 }
 ```
 
