@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   scheduled one (`refresh=wait_for`). Previously, if `index.refresh_interval` was set to `-1` on these indices (e.g. via
   an index template), every write blocked until something else triggered a refresh. With the default settings, each
   write also waited up to 1 second.
+* A tag set with `tag` and checksums cleared with `clear-checksums` are now visible to subsequent reads right away.
+  Previously they only became visible after the next scheduled refresh of the index, so e.g. a `tag-exists` or
+  `rollback` issued right afterwards in the same JVM might not see the tag.
+* `clear-checksums` now also drops the checksums cached in memory. Previously, subsequent commands in the same JVM
+  still saw the old checksums.
 
 ## [2.1.0] - 2026-09-03
 
