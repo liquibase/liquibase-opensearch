@@ -25,7 +25,6 @@ import org.opensearch.client.opensearch.core.search.Hit;
 
 import java.util.Date;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
