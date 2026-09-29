@@ -15,10 +15,12 @@ import org.apache.hc.core5.http.HttpHost;
 import org.apache.hc.core5.http.nio.ssl.TlsStrategy;
 import org.apache.hc.core5.reactor.ssl.TlsDetails;
 import org.apache.hc.core5.ssl.SSLContextBuilder;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.opensearch.client.json.jackson3.JacksonJsonpMapper;
 import org.opensearch.client.opensearch.OpenSearchClient;
+import org.opensearch.client.transport.OpenSearchTransport;
 import org.opensearch.client.transport.httpclient5.ApacheHttpClient5TransportBuilder;
 import org.opensearch.testcontainers.OpenSearchContainer;
 
@@ -32,16 +34,19 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class CustomOpenSearchClientLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
 
+    private OpenSearchTransport customTransport;
+    private OpenSearchClient customClient;
+
     @Override
     protected OpenSearchContainer<?> newContainer() {
         return super.newContainer().withSecurityEnabled();
     }
 
     @SneakyThrows
-    private OpenSearchClient newOpenSearchClientFromContainer() {
+    private OpenSearchTransport newOpenSearchTransportFromContainer() {
         final var host = HttpHost.create(this.container.getHttpHostAddress());
 
-        final var transport = ApacheHttpClient5TransportBuilder
+        return ApacheHttpClient5TransportBuilder
                 .builder(host)
                 .setHttpClientConfigCallback(httpClientBuilder -> {
                     final var username = Optional.ofNullable(this.container.getUsername());
@@ -83,8 +88,6 @@ class CustomOpenSearchClientLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
                 })
                 .setMapper(new JacksonJsonpMapper())
                 .build();
-
-        return new OpenSearchClient(transport);
     }
 
     @SneakyThrows
@@ -99,8 +102,30 @@ class CustomOpenSearchClientLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
         // note: registering the connection/database with `ConnectionServiceFactory`/`DatabaseFactory` would NOT work.
         //       both factories treat registered objects as mere prototypes and hand out a fresh instance built via the
         //       no-arg constructor, so the custom client would be silently dropped.
-        this.connection = new OpenSearchConnection(this.newOpenSearchClientFromContainer());
+        this.customTransport = this.newOpenSearchTransportFromContainer();
+        this.customClient = new OpenSearchClient(this.customTransport);
+        this.connection = new OpenSearchConnection(this.customClient);
         this.database = new OpenSearchLiquibaseDatabase(this.connection);
+    }
+
+    @SneakyThrows
+    @AfterEach
+    @Override
+    protected void afterEach() {
+        super.afterEach();
+        // the client was injected, i.e. we own its transport and have to close it ourselves.
+        if (this.customTransport != null) {
+            this.customTransport.close();
+        }
+    }
+
+    @SneakyThrows
+    @Test
+    void itDoesNotCloseAnInjectedClient() {
+        this.connection.close();
+
+        assertThat(this.connection.isClosed()).isTrue();
+        assertThat(this.customClient.info().clusterName()).isEqualTo("docker-cluster");
     }
 
     @SneakyThrows
