@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   connection failed later with an unrelated error. Whitespace around the comma-separated URLs is now ignored.
 * `drop-all` now fails with a clear error message. Previously it failed with a bare `UnsupportedOperationException`.
   It is (still) not supported: for OpenSearch it would mean deleting every index of the cluster.
+* `httpRequest`: a missing `method` or `path` is now reported when the changelog is validated, i.e. before any
+  changeset runs. Previously it was only noticed when the change was executed (after earlier changesets of the same
+  update had already run).
 
 ## [2.1.1] - 2026-09-29
 

@@ -13,6 +13,7 @@ import liquibase.command.core.DropAllCommandStep;
 import liquibase.command.core.TagCommandStep;
 import liquibase.command.core.helpers.DbUrlConnectionArgumentsCommandStep;
 import liquibase.database.DatabaseFactory;
+import liquibase.exception.ValidationFailedException;
 import liquibase.ext.opensearch.database.OpenSearchConnection;
 import liquibase.ext.opensearch.database.OpenSearchLiquibaseDatabase;
 import liquibase.report.UpdateReportParameters;
@@ -436,6 +437,20 @@ class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
         ).hasMessageContaining("Unknown type: liquibase.statement.core.CreateTableStatement");
     }
 
+    /**
+     * Missing mandatory properties must be detected when validating the changelog, i.e. before any changeset runs.
+     */
+    @SneakyThrows
+    @Test
+    void itRejectsAChangeWithoutPathBeforeExecutingAnything() {
+        assertThatThrownBy(() -> this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.missing-path.yaml"))
+                .hasRootCauseInstanceOf(ValidationFailedException.class)
+                .rootCause().hasMessageContaining("path is required for httpRequest on opensearch");
+
+        assertThat(this.indexExists("testindex-missing-path")).isFalse();
+        assertThat(this.changelogEntryCount()).isZero();
+    }
+
     @SneakyThrows
     @Test
     void itRejectsDropAllWithoutDeletingAnything() {
@@ -459,6 +474,14 @@ class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
 
     private static int executedChangeSetCount(final CommandResults results) {
         return ((UpdateReportParameters) results.getResult("updateReport")).getChangesetInfo().getChangesetCount();
+    }
+
+    /**
+     * @return the number of entries in the changelog index (0 if the index does not exist).
+     */
+    private long changelogEntryCount() throws Exception {
+        final var index = this.database.getDatabaseChangeLogTableName();
+        return this.indexExists(index) ? this.getDocumentCount(index) : 0;
     }
 
     /**
