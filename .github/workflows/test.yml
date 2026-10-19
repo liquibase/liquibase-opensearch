@@ -9,14 +9,12 @@ on:
       - synchronize
 
 permissions:
-  contents: write
-  pull-requests: write
-  packages: read
-  id-token: write
-  
+  contents: read
+
 jobs:
 
   authorize:
+    permissions: {}
     environment: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'external' || 'internal' }}
     runs-on: ubuntu-latest
     steps:
@@ -24,6 +22,13 @@ jobs:
 
   build-test:
     needs: authorize
+    # must cover every permission requested by the called workflow (incl. the
+    # nested sonar-scan.yml), otherwise the run fails at startup
+    permissions:
+      contents: read
+      pull-requests: write
+      packages: read
+      id-token: write
     uses: liquibase/build-logic/.github/workflows/os-extension-test.yml@main
     secrets: inherit
     with:
@@ -80,5 +85,8 @@ jobs:
 
   dependabot:
     needs: build-test
+    permissions:
+      contents: write
+      pull-requests: write
     uses: liquibase/build-logic/.github/workflows/dependabot-automerge.yml@main
     secrets: inherit
