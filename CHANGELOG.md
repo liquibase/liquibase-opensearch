@@ -31,6 +31,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   written: a checksum update (e.g. the first `update` after `clear-checksums`) failed with a
   `document_missing_exception`, and removing the entry could silently do nothing. A rollback which does not find the
   entry now logs a warning.
+* The deployment ID and the Liquibase version are now stored for every changelog entry (they were always empty
+  before). The deployment ID is e.g. shown by the `history` command, the Liquibase version is used by Liquibase to fix
+  entries written by Liquibase versions with known bugs.
+* Changelog entries of changesets in an included changelog with a `logicalFilePath`, which Liquibase 4.31.0 - 5.0.1
+  stored with the wrong file path, can now be fixed by Liquibase. Previously this would have failed with
+  "liquibase-opensearch extension cannot execute changeset" (it could not happen yet as the Liquibase version was not
+  stored).
 
 ## [2.1.1] - 2026-09-29
 

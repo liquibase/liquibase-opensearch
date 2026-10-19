@@ -19,6 +19,7 @@ import liquibase.exception.ValidationFailedException;
 import liquibase.ext.opensearch.database.OpenSearchConnection;
 import liquibase.ext.opensearch.database.OpenSearchLiquibaseDatabase;
 import liquibase.report.UpdateReportParameters;
+import liquibase.sqlgenerator.core.MarkChangeSetRanGenerator;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -207,6 +208,31 @@ class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
         // the sequence continues after the highest stored value
         this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.yaml");
         assertThat(this.storedOrderExecuted()).containsExactlyElementsOf(range(1, 3));
+    }
+
+    /**
+     * Up to and including version 2.1.1 neither {@code deploymentId} nor {@code liquibaseVersion} were stored (the
+     * {@link RanChangeSet} constructor used does not set them). liquibase uses them e.g. for the {@code history} command
+     * and for checksum/file path migrations.
+     */
+    @SneakyThrows
+    @Test
+    void itStoresTheDeploymentIdAndLiquibaseVersion() {
+        this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.multiple-steps.yaml");
+        final var expectedDeploymentId = Scope.getCurrentScope().getDeploymentId();
+        assertThat(expectedDeploymentId).isNotBlank();
+        final var expectedLiquibaseVersion = MarkChangeSetRanGenerator.getLiquibaseBuildVersion();
+
+        // the in-memory copy of the history service ...
+        assertThat(this.historyService().getRanChangeSets()).hasSize(2).allSatisfy(r -> {
+            assertThat(r.getDeploymentId()).isEqualTo(expectedDeploymentId);
+            assertThat(r.getLiquibaseVersion()).isEqualTo(expectedLiquibaseVersion);
+        });
+        // ... and the stored entries
+        assertThat(this.loadRanChangeSets()).hasSize(2).allSatisfy(r -> {
+            assertThat(r.getDeploymentId()).isEqualTo(expectedDeploymentId);
+            assertThat(r.getLiquibaseVersion()).isEqualTo(expectedLiquibaseVersion);
+        });
     }
 
     /**
