@@ -451,6 +451,20 @@ class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
         assertThat(this.changelogEntryCount()).isZero();
     }
 
+    /**
+     * Invalid values must be detected when validating the changelog, i.e. before any changeset runs.
+     */
+    @SneakyThrows
+    @Test
+    void itRejectsAPathWithoutLeadingSlashBeforeExecutingAnything() {
+        assertThatThrownBy(() -> this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.invalid-path.yaml"))
+                .hasRootCauseInstanceOf(ValidationFailedException.class)
+                .rootCause().hasMessageContaining("path must start with '/' but was 'testindex-invalid-path/_doc/1'");
+
+        assertThat(this.indexExists("testindex-invalid-path")).isFalse();
+        assertThat(this.changelogEntryCount()).isZero();
+    }
+
     @SneakyThrows
     @Test
     void itRejectsDropAllWithoutDeletingAnything() {

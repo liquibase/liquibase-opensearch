@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+* `httpRequest` is now validated more strictly: `method` must be one of `POST`, `PUT`, `DELETE` or `PATCH` (the same
+  methods the XSD already allowed; case-sensitive) and `path` must start with a `/`. Invalid changes are reported when
+  the changelog is validated, before any changeset runs. Previously such changes were only rejected (if at all) by
+  OpenSearch when they were executed. Changesets which have already been executed are not validated again (unless they
+  are `runAlways`/`runOnChange`), so they are not affected.
+
 ### Fixed
 
 * `OpenSearchClientDriver#getParentLogger` now throws a `SQLFeatureNotSupportedException` (as allowed by the JDBC

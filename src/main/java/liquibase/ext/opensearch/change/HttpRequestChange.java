@@ -5,13 +5,16 @@ import liquibase.change.ChangeParameterMetaData;
 import liquibase.change.DatabaseChange;
 import liquibase.change.DatabaseChangeProperty;
 import liquibase.database.Database;
+import liquibase.exception.ValidationErrors;
 import liquibase.ext.opensearch.statement.HttpRequestStatement;
 import liquibase.servicelocator.PrioritizedService;
 import liquibase.statement.SqlStatement;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hc.core5.http.ContentType;
 
+import java.util.List;
 import java.util.Optional;
 
 @DatabaseChange(name = "httpRequest",
@@ -20,6 +23,11 @@ import java.util.Optional;
 @NoArgsConstructor
 @Setter
 public class HttpRequestChange extends AbstractChange {
+
+    /**
+     * Same as the {@code httpMethods} of the XSD: other methods can't modify data in OpenSearch.
+     */
+    private static final List<String> ALLOWED_METHODS = List.of("POST", "PUT", "DELETE", "PATCH");
 
     private String method;
     private String contentType;
@@ -50,6 +58,19 @@ public class HttpRequestChange extends AbstractChange {
             description = "Body of the request. Defaults to an empty body")
     public String getBody() {
         return this.body;
+    }
+
+    @Override
+    public ValidationErrors validate(final Database database) {
+        final var errors = super.validate(database);
+        // missing (null or blank) values have already been reported by `super.validate`
+        if (StringUtils.isNotBlank(this.method) && !ALLOWED_METHODS.contains(this.method)) {
+            errors.addError("method must be one of %s but was '%s'".formatted(String.join(", ", ALLOWED_METHODS), this.method));
+        }
+        if (StringUtils.isNotBlank(this.path) && !this.path.startsWith("/")) {
+            errors.addError("path must start with '/' but was '%s'".formatted(this.path));
+        }
+        return errors;
     }
 
     @Override
