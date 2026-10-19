@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+* `OpenSearchClientDriver#getParentLogger` now throws a `SQLFeatureNotSupportedException` (as allowed by the JDBC
+  specification). Previously it failed with a `ClassCastException`.
+
 ## [2.1.1] - 2026-09-29
 
 ### Fixed
