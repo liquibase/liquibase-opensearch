@@ -6,6 +6,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+* `httpRequest` is now validated more strictly: `method` must be one of `POST`, `PUT`, `DELETE` or `PATCH` (the same
+  methods the XSD already allowed; case-sensitive) and `path` must start with a `/`. Invalid changes are reported when
+  the changelog is validated, before any changeset runs. Previously such changes were only rejected (if at all) by
+  OpenSearch when they were executed. Changesets which have already been executed are not validated again (unless they
+  are `runAlways`/`runOnChange`), so they are not affected.
+
+### Fixed
+
+* `OpenSearchClientDriver#getParentLogger` now throws a `SQLFeatureNotSupportedException` (as allowed by the JDBC
+  specification). Previously it failed with a `ClassCastException`.
+* Invalid OpenSearch URLs (e.g. without a scheme or host) are now rejected with an error naming the invalid URL.
+  Previously they were silently ignored, so with several URLs a typo went unnoticed, and with only invalid URLs the
+  connection failed later with an unrelated error. Whitespace around the comma-separated URLs is now ignored.
+* `drop-all` now fails with a clear error message. Previously it failed with a bare `UnsupportedOperationException`.
+  It is (still) not supported: for OpenSearch it would mean deleting every index of the cluster.
+* `httpRequest`: a missing `method` or `path` is now reported when the changelog is validated, i.e. before any
+  changeset runs. Previously it was only noticed when the change was executed (after earlier changesets of the same
+  update had already run).
+* Rollbacks and checksum updates now find the changelog entry of changesets with a `logicalFilePath` which Liquibase
+  normalises (e.g. one containing `./`). Previously the document ID was derived differently than when the entry was
+  written: a checksum update (e.g. the first `update` after `clear-checksums`) failed with a
+  `document_missing_exception`, and removing the entry could silently do nothing. A rollback which does not find the
+  entry now logs a warning.
+* The deployment ID and the Liquibase version are now stored for every changelog entry (they were always empty
+  before). The deployment ID is e.g. shown by the `history` command, the Liquibase version is used by Liquibase to fix
+  entries written by Liquibase versions with known bugs.
+* Changelog entries of changesets in an included changelog with a `logicalFilePath`, which Liquibase 4.31.0 - 5.0.1
+  stored with the wrong file path, can now be fixed by Liquibase. Previously this would have failed with
+  "liquibase-opensearch extension cannot execute changeset" (it could not happen yet as the Liquibase version was not
+  stored).
+
 ## [2.1.1] - 2026-09-29
 
 ### Fixed

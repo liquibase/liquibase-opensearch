@@ -1,12 +1,12 @@
 package liquibase.ext.opensearch.database;
 
-import liquibase.Scope;
 import org.apache.commons.lang3.StringUtils;
 
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.DriverPropertyInfo;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import java.util.Properties;
 import java.util.logging.Logger;
 
@@ -49,7 +49,8 @@ public class OpenSearchClientDriver implements Driver {
     }
 
     @Override
-    public Logger getParentLogger() {
-        return (Logger) Scope.getCurrentScope().getLog(getClass());
+    public Logger getParentLogger() throws SQLFeatureNotSupportedException {
+        // this driver does not use java.util.logging (it uses the liquibase logging infrastructure instead)
+        throw new SQLFeatureNotSupportedException("java.util.logging is not used by the OpenSearch driver");
     }
 }

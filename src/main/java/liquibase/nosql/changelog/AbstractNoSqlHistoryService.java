@@ -34,6 +34,7 @@ import liquibase.executor.LoggingExecutor;
 import liquibase.ext.opensearch.executor.OpenSearchExecutor;
 import liquibase.logging.Logger;
 import liquibase.nosql.database.AbstractNoSqlDatabase;
+import liquibase.sqlgenerator.core.MarkChangeSetRanGenerator;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -192,10 +193,24 @@ public abstract class AbstractNoSqlHistoryService<D extends AbstractNoSqlDatabas
 
         getDatabase().commit();
         if (this.ranChangeSetList != null) {
-            final var ranChangeSet = new RanChangeSet(changeSet, execType, null, null);
-            ranChangeSet.setOrderExecuted(nextSequenceValue);
-            this.ranChangeSetList.add(ranChangeSet);
+            this.ranChangeSetList.add(newRanChangeSet(changeSet, execType, nextSequenceValue));
         }
+    }
+
+    /**
+     * Builds the changelog entry for a changeset which has just been run. Both the stored entry and the in-memory copy
+     * must be built with this so that they don't differ.
+     * <p>
+     * Mirrors what liquibase stores for SQL databases ({@code MarkChangeSetRanGenerator}), except for contexts and labels
+     * (not stored yet).
+     */
+    protected RanChangeSet newRanChangeSet(final ChangeSet changeSet, final ChangeSet.ExecType execType, final Integer orderExecuted) {
+        final var ranChangeSet = new RanChangeSet(changeSet, execType, null, null);
+        // the constructor does not set these
+        ranChangeSet.setOrderExecuted(orderExecuted);
+        ranChangeSet.setDeploymentId(Scope.getCurrentScope().getDeploymentId());
+        ranChangeSet.setLiquibaseVersion(MarkChangeSetRanGenerator.getLiquibaseBuildVersion());
+        return ranChangeSet;
     }
 
     @Override

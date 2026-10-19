@@ -17,7 +17,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class UnsupportedOpenSearchVersionIT {
 
     @Container
-    private final OpenSearchContainer<?> container = new OpenSearchContainer<>(DockerImageName.parse("opensearchproject/opensearch:1.3.20"));
+    private final OpenSearchContainer<?> container = new OpenSearchContainer<>(DockerImageName.parse("opensearchproject/opensearch:1.3.20"))
+            // the default heap (1 GB) is far more than needed; it also runs next to the shared container of other ITs
+            .withEnv("OPENSEARCH_JAVA_OPTS", "-Xms512m -Xmx512m");
 
     @Test
     void itRejectsOpenSearchOlderThan2_0() {

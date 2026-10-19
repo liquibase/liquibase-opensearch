@@ -26,10 +26,10 @@ import org.opensearch.client.transport.httpclient5.ApacheHttpClient5TransportBui
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.sql.Driver;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.stream.Collectors;
@@ -85,24 +85,30 @@ public class OpenSearchConnection extends AbstractNoSqlConnection {
         }
 
         this.connectionProperties = Optional.of(driverProperties);
+        final var parsedUris = new ArrayList<URI>();
+        for (final var uri : realUrl.split(OPENSEARCH_URI_SEPARATOR)) {
+            parsedUris.add(toUri(uri));
+        }
+        this.uris = Optional.of(List.copyOf(parsedUris));
 
         try {
-            this.uris = Optional.of(Arrays.stream(realUrl.split(OPENSEARCH_URI_SEPARATOR))
-                    .map(this::toUri)
-                    .filter(Objects::nonNull)
-                    .toList());
             this.connect();
         } catch (final Exception e) {
             throw new DatabaseException("Could not open connection to database: " + realUrl, e);
         }
     }
 
-    private URI toUri(String uri) {
+    private static URI toUri(final String uri) throws DatabaseException {
+        final URI result;
         try {
-            return URI.create(uri);
-        } catch (IllegalArgumentException ex) {
-            return null;
+            result = new URI(uri.trim());
+        } catch (final URISyntaxException e) {
+            throw new DatabaseException("Invalid OpenSearch URL '%s': %s".formatted(uri, e.getMessage()), e);
         }
+        if (result.getScheme() == null || result.getHost() == null) {
+            throw new DatabaseException("Invalid OpenSearch URL '%s': it must contain a scheme and a host (e.g. http://localhost:9200)".formatted(uri));
+        }
+        return result;
     }
 
     @Override

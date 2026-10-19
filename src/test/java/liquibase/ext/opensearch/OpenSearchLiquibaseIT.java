@@ -9,14 +9,21 @@ import liquibase.changelog.RanChangeSet;
 import liquibase.command.CommandResults;
 import liquibase.command.CommandScope;
 import liquibase.command.core.ClearChecksumsCommandStep;
+import liquibase.command.core.DropAllCommandStep;
+import liquibase.command.core.RollbackCountCommandStep;
 import liquibase.command.core.TagCommandStep;
+import liquibase.command.core.helpers.DatabaseChangelogCommandStep;
 import liquibase.command.core.helpers.DbUrlConnectionArgumentsCommandStep;
 import liquibase.database.DatabaseFactory;
+import liquibase.exception.ValidationFailedException;
 import liquibase.ext.opensearch.database.OpenSearchConnection;
 import liquibase.ext.opensearch.database.OpenSearchLiquibaseDatabase;
 import liquibase.report.UpdateReportParameters;
+import liquibase.sqlgenerator.core.MarkChangeSetRanGenerator;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.opensearch.client.opensearch._types.Refresh;
 import org.opensearch.client.opensearch._types.SortOrder;
 import org.opensearch.client.opensearch._types.query_dsl.Query;
@@ -201,6 +208,31 @@ class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
         // the sequence continues after the highest stored value
         this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.yaml");
         assertThat(this.storedOrderExecuted()).containsExactlyElementsOf(range(1, 3));
+    }
+
+    /**
+     * Up to and including version 2.1.1 neither {@code deploymentId} nor {@code liquibaseVersion} were stored (the
+     * {@link RanChangeSet} constructor used does not set them). liquibase uses them e.g. for the {@code history} command
+     * and for checksum/file path migrations.
+     */
+    @SneakyThrows
+    @Test
+    void itStoresTheDeploymentIdAndLiquibaseVersion() {
+        this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.multiple-steps.yaml");
+        final var expectedDeploymentId = Scope.getCurrentScope().getDeploymentId();
+        assertThat(expectedDeploymentId).isNotBlank();
+        final var expectedLiquibaseVersion = MarkChangeSetRanGenerator.getLiquibaseBuildVersion();
+
+        // the in-memory copy of the history service ...
+        assertThat(this.historyService().getRanChangeSets()).hasSize(2).allSatisfy(r -> {
+            assertThat(r.getDeploymentId()).isEqualTo(expectedDeploymentId);
+            assertThat(r.getLiquibaseVersion()).isEqualTo(expectedLiquibaseVersion);
+        });
+        // ... and the stored entries
+        assertThat(this.loadRanChangeSets()).hasSize(2).allSatisfy(r -> {
+            assertThat(r.getDeploymentId()).isEqualTo(expectedDeploymentId);
+            assertThat(r.getLiquibaseVersion()).isEqualTo(expectedLiquibaseVersion);
+        });
     }
 
     /**
@@ -406,6 +438,84 @@ class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
         assertThat(this.taggedEntries("testTag")).extracting(RanChangeSet::getOrderExecuted).containsExactly(2);
     }
 
+    /**
+     * Rolling back a changeset must remove its changelog entry, otherwise the next update skips it although its changes
+     * have been rolled back. The changelog path is part of the document ID and liquibase normalises it when storing the
+     * entry, thus this is also tested with a {@code logicalFilePath} which liquibase does not normalise when parsing.
+     */
+    @SneakyThrows
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "liquibase/ext/changelog.httprequest.rollback.yaml",
+            "liquibase/ext/changelog.httprequest.rollback-logical-file-path.yaml",
+    })
+    void itRemovesTheChangelogEntryOfARolledBackChangeSet(final String changeLogFile) {
+        this.doLiquibaseUpdate(changeLogFile);
+        assertThat(this.indexExists("testindex-rollback-2")).isTrue();
+
+        new CommandScope(RollbackCountCommandStep.COMMAND_NAME)
+                .addArgumentValue(DbUrlConnectionArgumentsCommandStep.DATABASE_ARG, this.database)
+                .addArgumentValue(DatabaseChangelogCommandStep.CHANGELOG_FILE_ARG, changeLogFile)
+                .addArgumentValue(RollbackCountCommandStep.COUNT_ARG, 1)
+                .execute();
+
+        assertThat(this.indexExists("testindex-rollback-2")).isFalse();
+        assertThat(this.loadRanChangeSets()).extracting(RanChangeSet::getId).containsExactly("1");
+
+        // the rolled back changeset must run again
+        assertThat(executedChangeSetCount(this.doLiquibaseUpdate(changeLogFile))).isEqualTo(1);
+        assertThat(this.indexExists("testindex-rollback-2")).isTrue();
+    }
+
+    /**
+     * Cleared checksums are recalculated and stored by the next update. The changelog path is part of the document ID
+     * and liquibase normalises it when storing the entry, thus this is also tested with a {@code logicalFilePath} which
+     * liquibase does not normalise when parsing.
+     */
+    @SneakyThrows
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "liquibase/ext/changelog.httprequest.rollback.yaml",
+            "liquibase/ext/changelog.httprequest.rollback-logical-file-path.yaml",
+    })
+    void itStoresRecalculatedChecksumsAfterClearingThem(final String changeLogFile) {
+        this.doLiquibaseUpdate(changeLogFile);
+        this.clearChecksums();
+
+        assertThat(executedChangeSetCount(this.doLiquibaseUpdate(changeLogFile))).isZero();
+
+        assertThat(this.loadRanChangeSets()).hasSize(2).extracting(RanChangeSet::getLastCheckSum).doesNotContainNull();
+    }
+
+    /**
+     * Liquibase 4.31.0 - 5.0.1 stored changesets of an included changelog with a {@code logicalFilePath} under the
+     * {@code logicalFilePath} of the parent changelog. Newer versions fix such entries via
+     * {@link liquibase.changelog.ChangeLogHistoryService#replaceFilePath}, the changeset must not run again.
+     */
+    @SneakyThrows
+    @Test
+    void itFixesTheFilePathOfEntriesWrittenWithTheLogicalFilePathBug() {
+        // set up the changelog index
+        this.doLiquibaseUpdate("liquibase/ext/changelog.empty.yaml");
+        final var buggyEntry = new RanChangeSet("parent-logical.xml", "1", "test", null, new Date(), null, ChangeSet.ExecType.EXECUTED, "httpRequest", null, null, null, null, null);
+        buggyEntry.setLiquibaseVersion("5.0.1");
+        buggyEntry.setOrderExecuted(1);
+        this.getOpenSearchClient().index(i -> i
+                .index(this.database.getDatabaseChangeLogTableName())
+                .id(buggyEntry.toString())
+                .document(buggyEntry)
+                .refresh(Refresh.True));
+
+        assertThat(executedChangeSetCount(this.doLiquibaseUpdate("liquibase/ext/changelog.logical-file-path-parent.xml"))).isZero();
+
+        assertThat(this.indexExists("testindex-logical-file-path")).isFalse();
+        final var entries = this.loadRanChangeSets();
+        assertThat(entries).extracting(RanChangeSet::toString).containsExactly("child-logical.xml::1::test");
+        assertThat(entries.get(0).getStoredChangeLog()).isEqualTo("child-logical.xml");
+        assertThat(entries.get(0).getOrderExecuted()).isEqualTo(1);
+        assertThat(entries.get(0).getLiquibaseVersion()).isEqualTo("5.0.1");
+    }
+
     @SneakyThrows
     @Test
     void itSupportsAlternativeContentTypes() {
@@ -435,12 +545,65 @@ class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
         ).hasMessageContaining("Unknown type: liquibase.statement.core.CreateTableStatement");
     }
 
+    /**
+     * Missing mandatory properties must be detected when validating the changelog, i.e. before any changeset runs.
+     */
+    @SneakyThrows
+    @Test
+    void itRejectsAChangeWithoutPathBeforeExecutingAnything() {
+        assertThatThrownBy(() -> this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.missing-path.yaml"))
+                .hasRootCauseInstanceOf(ValidationFailedException.class)
+                .rootCause().hasMessageContaining("path is required for httpRequest on opensearch");
+
+        assertThat(this.indexExists("testindex-missing-path")).isFalse();
+        assertThat(this.changelogEntryCount()).isZero();
+    }
+
+    /**
+     * Invalid values must be detected when validating the changelog, i.e. before any changeset runs.
+     */
+    @SneakyThrows
+    @Test
+    void itRejectsAPathWithoutLeadingSlashBeforeExecutingAnything() {
+        assertThatThrownBy(() -> this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.invalid-path.yaml"))
+                .hasRootCauseInstanceOf(ValidationFailedException.class)
+                .rootCause().hasMessageContaining("path must start with '/' but was 'testindex-invalid-path/_doc/1'");
+
+        assertThat(this.indexExists("testindex-invalid-path")).isFalse();
+        assertThat(this.changelogEntryCount()).isZero();
+    }
+
+    @SneakyThrows
+    @Test
+    void itRejectsDropAllWithoutDeletingAnything() {
+        this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.yaml");
+
+        assertThatThrownBy(() -> new CommandScope(DropAllCommandStep.COMMAND_NAME)
+                .addArgumentValue(DbUrlConnectionArgumentsCommandStep.DATABASE_ARG, this.database)
+                .addArgumentValue(DropAllCommandStep.FORCE_ARG, true)
+                .execute()
+        ).hasMessageContaining("does not support drop-all commands");
+
+        assertThat(this.indexExists("testindex")).isTrue();
+        assertThat(this.getDocumentCount(this.database.getDatabaseChangeLogTableName())).isEqualTo(1);
+        // the lock must have been released again
+        assertThat(this.getDocumentCount(this.database.getDatabaseChangeLogLockTableName())).isZero();
+    }
+
     private static List<Integer> range(final int fromInclusive, final int toInclusive) {
         return IntStream.rangeClosed(fromInclusive, toInclusive).boxed().toList();
     }
 
     private static int executedChangeSetCount(final CommandResults results) {
         return ((UpdateReportParameters) results.getResult("updateReport")).getChangesetInfo().getChangesetCount();
+    }
+
+    /**
+     * @return the number of entries in the changelog index (0 if the index does not exist).
+     */
+    private long changelogEntryCount() throws Exception {
+        final var index = this.database.getDatabaseChangeLogTableName();
+        return this.indexExists(index) ? this.getDocumentCount(index) : 0;
     }
 
     /**

@@ -1,0 +1,18 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1
+      author: test
+      changes:
+        - httpRequest:
+            method: PUT
+            path: /testindex-missing-path
+  - changeSet:
+      id: 2
+      author: test
+      changes:
+        - httpRequest:
+            method: PUT
+            body: >
+              {
+                "testfield": "foo"
+              }
