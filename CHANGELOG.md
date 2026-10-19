@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `OpenSearchClientDriver#getParentLogger` now throws a `SQLFeatureNotSupportedException` (as allowed by the JDBC
   specification). Previously it failed with a `ClassCastException`.
+* Invalid OpenSearch URLs (e.g. without a scheme or host) are now rejected with an error naming the invalid URL.
+  Previously they were silently ignored, so with several URLs a typo went unnoticed, and with only invalid URLs the
+  connection failed later with an unrelated error. Whitespace around the comma-separated URLs is now ignored.
 
 ## [2.1.1] - 2026-09-29
 
