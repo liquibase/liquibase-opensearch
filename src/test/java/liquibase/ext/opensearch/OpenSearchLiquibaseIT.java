@@ -10,7 +10,9 @@ import liquibase.command.CommandResults;
 import liquibase.command.CommandScope;
 import liquibase.command.core.ClearChecksumsCommandStep;
 import liquibase.command.core.DropAllCommandStep;
+import liquibase.command.core.RollbackCountCommandStep;
 import liquibase.command.core.TagCommandStep;
+import liquibase.command.core.helpers.DatabaseChangelogCommandStep;
 import liquibase.command.core.helpers.DbUrlConnectionArgumentsCommandStep;
 import liquibase.database.DatabaseFactory;
 import liquibase.exception.ValidationFailedException;
@@ -19,6 +21,8 @@ import liquibase.ext.opensearch.database.OpenSearchLiquibaseDatabase;
 import liquibase.report.UpdateReportParameters;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.opensearch.client.opensearch._types.Refresh;
 import org.opensearch.client.opensearch._types.SortOrder;
 import org.opensearch.client.opensearch._types.query_dsl.Query;
@@ -406,6 +410,55 @@ class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
         this.tag("testTag");
 
         assertThat(this.taggedEntries("testTag")).extracting(RanChangeSet::getOrderExecuted).containsExactly(2);
+    }
+
+    /**
+     * Rolling back a changeset must remove its changelog entry, otherwise the next update skips it although its changes
+     * have been rolled back. The changelog path is part of the document ID and liquibase normalises it when storing the
+     * entry, thus this is also tested with a {@code logicalFilePath} which liquibase does not normalise when parsing.
+     */
+    @SneakyThrows
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "liquibase/ext/changelog.httprequest.rollback.yaml",
+            "liquibase/ext/changelog.httprequest.rollback-logical-file-path.yaml",
+    })
+    void itRemovesTheChangelogEntryOfARolledBackChangeSet(final String changeLogFile) {
+        this.doLiquibaseUpdate(changeLogFile);
+        assertThat(this.indexExists("testindex-rollback-2")).isTrue();
+
+        new CommandScope(RollbackCountCommandStep.COMMAND_NAME)
+                .addArgumentValue(DbUrlConnectionArgumentsCommandStep.DATABASE_ARG, this.database)
+                .addArgumentValue(DatabaseChangelogCommandStep.CHANGELOG_FILE_ARG, changeLogFile)
+                .addArgumentValue(RollbackCountCommandStep.COUNT_ARG, 1)
+                .execute();
+
+        assertThat(this.indexExists("testindex-rollback-2")).isFalse();
+        assertThat(this.loadRanChangeSets()).extracting(RanChangeSet::getId).containsExactly("1");
+
+        // the rolled back changeset must run again
+        assertThat(executedChangeSetCount(this.doLiquibaseUpdate(changeLogFile))).isEqualTo(1);
+        assertThat(this.indexExists("testindex-rollback-2")).isTrue();
+    }
+
+    /**
+     * Cleared checksums are recalculated and stored by the next update. The changelog path is part of the document ID
+     * and liquibase normalises it when storing the entry, thus this is also tested with a {@code logicalFilePath} which
+     * liquibase does not normalise when parsing.
+     */
+    @SneakyThrows
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "liquibase/ext/changelog.httprequest.rollback.yaml",
+            "liquibase/ext/changelog.httprequest.rollback-logical-file-path.yaml",
+    })
+    void itStoresRecalculatedChecksumsAfterClearingThem(final String changeLogFile) {
+        this.doLiquibaseUpdate(changeLogFile);
+        this.clearChecksums();
+
+        assertThat(executedChangeSetCount(this.doLiquibaseUpdate(changeLogFile))).isZero();
+
+        assertThat(this.loadRanChangeSets()).hasSize(2).extracting(RanChangeSet::getLastCheckSum).doesNotContainNull();
     }
 
     @SneakyThrows

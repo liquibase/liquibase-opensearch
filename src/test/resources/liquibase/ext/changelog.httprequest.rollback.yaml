@@ -1,0 +1,23 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1
+      author: test
+      changes:
+        - httpRequest:
+            method: PUT
+            path: /testindex-rollback-1
+      rollback:
+        - httpRequest:
+            method: DELETE
+            path: /testindex-rollback-1
+  - changeSet:
+      id: 2
+      author: test
+      changes:
+        - httpRequest:
+            method: PUT
+            path: /testindex-rollback-2
+      rollback:
+        - httpRequest:
+            method: DELETE
+            path: /testindex-rollback-2

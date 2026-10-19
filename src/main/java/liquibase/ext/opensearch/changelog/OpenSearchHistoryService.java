@@ -19,6 +19,7 @@ import org.opensearch.client.opensearch.OpenSearchClient;
 import org.opensearch.client.opensearch._types.BuiltinScriptLanguage;
 import org.opensearch.client.opensearch._types.FieldValue;
 import org.opensearch.client.opensearch._types.Refresh;
+import org.opensearch.client.opensearch._types.Result;
 import org.opensearch.client.opensearch._types.ScriptLanguage;
 import org.opensearch.client.opensearch._types.SortOrder;
 import org.opensearch.client.opensearch.core.SearchRequest;
@@ -145,7 +146,7 @@ public class OpenSearchHistoryService extends AbstractNoSqlHistoryService<OpenSe
         try {
             this.getOpenSearchClient()
                     .index(r -> r.index(this.getDatabaseChangeLogTableName())
-                            .id(ranChangeSet.toString())
+                            .id(documentId(changeSet))
                             .document(ranChangeSet)
                             .refresh(Refresh.True));
         } catch (final IOException e) {
@@ -156,10 +157,13 @@ public class OpenSearchHistoryService extends AbstractNoSqlHistoryService<OpenSe
     @Override
     protected void removeRanChangeSet(final ChangeSet changeSet) throws DatabaseException {
         try {
-            this.getOpenSearchClient()
+            final var response = this.getOpenSearchClient()
                     .delete(r -> r.index(this.getDatabaseChangeLogTableName())
-                            .id(changeSet.toString())
+                            .id(documentId(changeSet))
                             .refresh(Refresh.True));
+            if (response.result() == Result.NotFound) {
+                getLogger().warning("tried to remove the changelog entry %s but it does not exist".formatted(documentId(changeSet)));
+            }
         } catch (final IOException e) {
             throw new DatabaseException(e);
         }
@@ -261,7 +265,7 @@ public class OpenSearchHistoryService extends AbstractNoSqlHistoryService<OpenSe
             this.getOpenSearchClient()
                     .update(r -> r
                                     .index(this.getDatabaseChangeLogTableName())
-                                    .id(changeSet.toString())
+                                    .id(documentId(changeSet))
                                     .doc(new CheckSumObj(checkSum))
                                     .refresh(Refresh.True)
                             , RanChangeSet.class);
@@ -273,6 +277,18 @@ public class OpenSearchHistoryService extends AbstractNoSqlHistoryService<OpenSe
     @Override
     public boolean supports(final Database database) {
         return OpenSearchLiquibaseDatabase.PRODUCT_NAME.equals(database.getDatabaseProductName());
+    }
+
+    /**
+     * Every write path must use this: the ID of a document must always be derived in the same way, otherwise updates
+     * and deletes silently target a non-existent document.
+     *
+     * @return the ID of the document in the changelog index for the given changeset. this is the same value as
+     * {@link RanChangeSet#toString()} of the stored entry (which normalises the path), unlike {@link ChangeSet#toString()}
+     * (which does not normalise it).
+     */
+    static String documentId(final ChangeSet changeSet) {
+        return changeSet.toNormalizedString();
     }
 
     @Override

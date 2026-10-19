@@ -26,6 +26,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * `httpRequest`: a missing `method` or `path` is now reported when the changelog is validated, i.e. before any
   changeset runs. Previously it was only noticed when the change was executed (after earlier changesets of the same
   update had already run).
+* Rollbacks and checksum updates now find the changelog entry of changesets with a `logicalFilePath` which Liquibase
+  normalises (e.g. one containing `./`). Previously the document ID was derived differently than when the entry was
+  written: a checksum update (e.g. the first `update` after `clear-checksums`) failed with a
+  `document_missing_exception`, and removing the entry could silently do nothing. A rollback which does not find the
+  entry now logs a warning.
 
 ## [2.1.1] - 2026-09-29
 
