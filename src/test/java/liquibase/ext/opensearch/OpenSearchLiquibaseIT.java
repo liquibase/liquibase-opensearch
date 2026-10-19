@@ -9,6 +9,7 @@ import liquibase.changelog.RanChangeSet;
 import liquibase.command.CommandResults;
 import liquibase.command.CommandScope;
 import liquibase.command.core.ClearChecksumsCommandStep;
+import liquibase.command.core.DropAllCommandStep;
 import liquibase.command.core.TagCommandStep;
 import liquibase.command.core.helpers.DbUrlConnectionArgumentsCommandStep;
 import liquibase.database.DatabaseFactory;
@@ -433,6 +434,23 @@ class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
         assertThatThrownBy(
                 () -> this.doLiquibaseUpdate("liquibase/ext/changelog.unsupported-changetype.yaml")
         ).hasMessageContaining("Unknown type: liquibase.statement.core.CreateTableStatement");
+    }
+
+    @SneakyThrows
+    @Test
+    void itRejectsDropAllWithoutDeletingAnything() {
+        this.doLiquibaseUpdate("liquibase/ext/changelog.httprequest.yaml");
+
+        assertThatThrownBy(() -> new CommandScope(DropAllCommandStep.COMMAND_NAME)
+                .addArgumentValue(DbUrlConnectionArgumentsCommandStep.DATABASE_ARG, this.database)
+                .addArgumentValue(DropAllCommandStep.FORCE_ARG, true)
+                .execute()
+        ).hasMessageContaining("does not support drop-all commands");
+
+        assertThat(this.indexExists("testindex")).isTrue();
+        assertThat(this.getDocumentCount(this.database.getDatabaseChangeLogTableName())).isEqualTo(1);
+        // the lock must have been released again
+        assertThat(this.getDocumentCount(this.database.getDatabaseChangeLogLockTableName())).isZero();
     }
 
     private static List<Integer> range(final int fromInclusive, final int toInclusive) {

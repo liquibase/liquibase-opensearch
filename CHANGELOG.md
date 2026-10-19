@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Invalid OpenSearch URLs (e.g. without a scheme or host) are now rejected with an error naming the invalid URL.
   Previously they were silently ignored, so with several URLs a typo went unnoticed, and with only invalid URLs the
   connection failed later with an unrelated error. Whitespace around the comma-separated URLs is now ignored.
+* `drop-all` now fails with a clear error message. Previously it failed with a bare `UnsupportedOperationException`.
+  It is (still) not supported: for OpenSearch it would mean deleting every index of the cluster.
 
 ## [2.1.1] - 2026-09-29
 

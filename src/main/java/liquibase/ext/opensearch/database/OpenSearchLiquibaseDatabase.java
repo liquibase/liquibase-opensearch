@@ -8,6 +8,8 @@ import liquibase.exception.UnexpectedLiquibaseException;
 import liquibase.nosql.database.AbstractNoSqlDatabase;
 import lombok.NoArgsConstructor;
 
+import java.util.ResourceBundle;
+
 @NoArgsConstructor
 public class OpenSearchLiquibaseDatabase extends AbstractNoSqlDatabase {
     public static final String PRODUCT_NAME = "OpenSearch";
@@ -20,6 +22,8 @@ public class OpenSearchLiquibaseDatabase extends AbstractNoSqlDatabase {
      */
     static final int MINIMUM_MAJOR_VERSION = 2;
     static final int MINIMUM_MINOR_VERSION = 0;
+
+    private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("liquibase/i18n/liquibase-opensearch");
 
     public OpenSearchLiquibaseDatabase(final OpenSearchConnection openSearchConnection) {
         super();
@@ -52,7 +56,8 @@ public class OpenSearchLiquibaseDatabase extends AbstractNoSqlDatabase {
 
     @Override
     public void dropDatabaseObjects(final CatalogAndSchema schemaToDrop) throws LiquibaseException {
-        throw new UnsupportedOperationException();
+        // dropping "all database objects" would mean deleting every index of the cluster, which is not supported
+        throw new DatabaseException(String.format(RESOURCE_BUNDLE.getString("command.unsupported"), "drop-all"));
     }
 
     @Override

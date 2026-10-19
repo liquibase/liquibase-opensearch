@@ -68,6 +68,11 @@ sent (e.g. for `DELETE` requests):
 
 All other fields are mandatory.
 
+### Unsupported Liquibase Commands
+
+`drop-all` is not supported: for OpenSearch it would mean deleting every index of the cluster. It fails with an error
+without deleting anything.
+
 ### With the Liquibase CLI
 
 To use this with the [Liquibase CLI] follow these steps:
