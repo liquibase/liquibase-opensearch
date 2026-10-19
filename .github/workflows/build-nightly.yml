@@ -12,4 +12,7 @@ jobs:
     with:
       nightly: true
       java: "[ 17, 21 ]"
+      # see `test.yml`: the integration tests need Docker, which the windows-latest runners don't have
+      os: '["ubuntu-latest"]'
+      runIntegrationTests: true
     secrets: inherit
