@@ -461,6 +461,35 @@ class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
         assertThat(this.loadRanChangeSets()).hasSize(2).extracting(RanChangeSet::getLastCheckSum).doesNotContainNull();
     }
 
+    /**
+     * Liquibase 4.31.0 - 5.0.1 stored changesets of an included changelog with a {@code logicalFilePath} under the
+     * {@code logicalFilePath} of the parent changelog. Newer versions fix such entries via
+     * {@link liquibase.changelog.ChangeLogHistoryService#replaceFilePath}, the changeset must not run again.
+     */
+    @SneakyThrows
+    @Test
+    void itFixesTheFilePathOfEntriesWrittenWithTheLogicalFilePathBug() {
+        // set up the changelog index
+        this.doLiquibaseUpdate("liquibase/ext/changelog.empty.yaml");
+        final var buggyEntry = new RanChangeSet("parent-logical.xml", "1", "test", null, new Date(), null, ChangeSet.ExecType.EXECUTED, "httpRequest", null, null, null, null, null);
+        buggyEntry.setLiquibaseVersion("5.0.1");
+        buggyEntry.setOrderExecuted(1);
+        this.getOpenSearchClient().index(i -> i
+                .index(this.database.getDatabaseChangeLogTableName())
+                .id(buggyEntry.toString())
+                .document(buggyEntry)
+                .refresh(Refresh.True));
+
+        assertThat(executedChangeSetCount(this.doLiquibaseUpdate("liquibase/ext/changelog.logical-file-path-parent.xml"))).isZero();
+
+        assertThat(this.indexExists("testindex-logical-file-path")).isFalse();
+        final var entries = this.loadRanChangeSets();
+        assertThat(entries).extracting(RanChangeSet::toString).containsExactly("child-logical.xml::1::test");
+        assertThat(entries.get(0).getStoredChangeLog()).isEqualTo("child-logical.xml");
+        assertThat(entries.get(0).getOrderExecuted()).isEqualTo(1);
+        assertThat(entries.get(0).getLiquibaseVersion()).isEqualTo("5.0.1");
+    }
+
     @SneakyThrows
     @Test
     void itSupportsAlternativeContentTypes() {

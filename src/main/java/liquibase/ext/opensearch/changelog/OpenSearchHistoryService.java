@@ -4,6 +4,7 @@ import liquibase.ChecksumVersion;
 import liquibase.Scope;
 import liquibase.change.CheckSum;
 import liquibase.changelog.ChangeSet;
+import liquibase.changelog.DatabaseChangeLog;
 import liquibase.changelog.RanChangeSet;
 import liquibase.database.Database;
 import liquibase.exception.DatabaseException;
@@ -272,6 +273,45 @@ public class OpenSearchHistoryService extends AbstractNoSqlHistoryService<OpenSe
         } catch (final IOException e) {
             throw new DatabaseException(e);
         }
+    }
+
+    @Override
+    public void replaceFilePath(final ChangeSet changeSet, final String oldPath) throws DatabaseException {
+        // the file path is part of the document ID, thus the entry has to be re-indexed under its new ID
+        final var oldId = DatabaseChangeLog.normalizePath(oldPath) + "::" + changeSet.getId() + "::" + changeSet.getAuthor();
+        final var newId = documentId(changeSet);
+        try {
+            final var existing = this.getOpenSearchClient()
+                    .get(g -> g.index(this.getDatabaseChangeLogTableName()).id(oldId), RanChangeSet.class);
+            if (!existing.found() || existing.source() == null) {
+                getLogger().warning("tried to replace the file path of the changelog entry %s but it does not exist".formatted(oldId));
+                return;
+            }
+            getLogger().warning("replacing the file path of the changelog entry %s by %s".formatted(oldId, changeSet.getFilePath()));
+
+            final var old = existing.source();
+            final var updated = new RanChangeSet(changeSet.getFilePath(), old.getId(), old.getAuthor(), old.getLastCheckSum(),
+                    old.getDateExecuted(), old.getTag(), old.getExecType(), old.getDescription(), old.getComments(),
+                    old.getContextExpression(), old.getLabels(), old.getDeploymentId(), changeSet.getStoredFilePath());
+            updated.setOrderExecuted(old.getOrderExecuted());
+            updated.setLiquibaseVersion(old.getLiquibaseVersion());
+
+            this.getOpenSearchClient()
+                    .index(r -> r.index(this.getDatabaseChangeLogTableName())
+                            .id(newId)
+                            .document(updated)
+                            .refresh(Refresh.True));
+            if (!newId.equals(oldId)) {
+                this.getOpenSearchClient()
+                        .delete(r -> r.index(this.getDatabaseChangeLogTableName())
+                                .id(oldId)
+                                .refresh(Refresh.True));
+            }
+        } catch (final IOException e) {
+            throw new DatabaseException(e);
+        }
+
+        reset();
     }
 
     @Override
