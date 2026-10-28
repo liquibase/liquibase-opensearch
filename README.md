@@ -66,7 +66,14 @@ sent (e.g. for `DELETE` requests):
             path: /testindex
 ```
 
-All other fields are mandatory.
+All other fields are mandatory. `method` must be one of `POST`, `PUT`, `DELETE` or `PATCH` (other methods can't modify
+data in OpenSearch) and `path` must start with a `/`. Invalid changes are reported when the changelog is validated,
+i.e. before any changeset runs.
+
+### Unsupported Liquibase Commands
+
+`drop-all` is not supported: for OpenSearch it would mean deleting every index of the cluster. It fails with an error
+without deleting anything.
 
 ### With the Liquibase CLI
 

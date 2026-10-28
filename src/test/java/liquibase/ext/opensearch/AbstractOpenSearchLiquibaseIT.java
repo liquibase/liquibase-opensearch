@@ -1,5 +1,7 @@
 package liquibase.ext.opensearch;
 
+import liquibase.Scope;
+import liquibase.changelog.FastCheckService;
 import liquibase.command.CommandResults;
 import liquibase.command.CommandScope;
 import liquibase.command.core.UpdateCommandStep;
@@ -16,12 +18,9 @@ import org.opensearch.client.opensearch._types.query_dsl.Query;
 import org.opensearch.client.opensearch.core.CountRequest;
 import org.opensearch.client.opensearch.indices.ExistsRequest;
 import org.opensearch.testcontainers.OpenSearchContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 @TestInstance(TestInstance.Lifecycle.PER_METHOD)
-@Testcontainers
 public abstract class AbstractOpenSearchLiquibaseIT {
     protected OpenSearchLiquibaseDatabase database;
     protected OpenSearchConnection connection;
@@ -29,8 +28,10 @@ public abstract class AbstractOpenSearchLiquibaseIT {
     protected static final String OPENSEARCH_2_DOCKER_IMAGE_NAME = "opensearchproject/opensearch:2.19.2";
     protected static final String OPENSEARCH_3_DOCKER_IMAGE_NAME = "opensearchproject/opensearch:3.0.0";
 
-    @Container
-    protected OpenSearchContainer<?> container = newContainer();
+    /**
+     * Shared with all other tests which use the same image and configuration, see {@link SharedOpenSearchContainers}.
+     */
+    protected final OpenSearchContainer<?> container = SharedOpenSearchContainers.get(newContainer());
 
     /***
      * @return whether OpenSearch V2 or V3 should be used for the tests. Defaults to using OpenSearch 3.x.
@@ -41,12 +42,27 @@ public abstract class AbstractOpenSearchLiquibaseIT {
 
     /**
      * This allows tests to define alternative containers, e.g. enabling security.
-     * @return the testcontainer to be used for this test.
+     * @return a new (not yet started) container. tests which need a cluster of their own (instead of the shared one)
+     * can use this as well, they then have to start and stop it themselves.
      */
     protected OpenSearchContainer<?> newContainer() {
         return new OpenSearchContainer<>(DockerImageName.parse(
                 this.openSearchImageName()
-        ));
+        ))
+                // the default heap (1 GB) is far more than the tests need
+                .withEnv("OPENSEARCH_JAVA_OPTS", "-Xms512m -Xmx512m");
+    }
+
+    /**
+     * Gives every test a clean cluster and a clean liquibase state, as the cluster is shared between all tests.
+     * <p>
+     * note: this is separate from {@link #beforeEach()} as some tests override that one.
+     */
+    @BeforeEach
+    protected void resetSharedCluster() {
+        SharedOpenSearchContainers.reset(this.container);
+        // the up-to-date cache is keyed by the cluster (UUID), which is the same for all tests sharing the container
+        Scope.getCurrentScope().getSingleton(FastCheckService.class).clearCache();
     }
 
     @BeforeEach

@@ -1,0 +1,19 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1
+      author: test
+      changes:
+        - httpRequest:
+            method: PUT
+            path: /testindex-invalid-path
+  - changeSet:
+      id: 2
+      author: test
+      changes:
+        - httpRequest:
+            method: PUT
+            path: testindex-invalid-path/_doc/1
+            body: >
+              {
+                "testfield": "foo"
+              }

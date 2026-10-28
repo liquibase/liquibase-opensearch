@@ -1,0 +1,16 @@
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xmlns:opensearch="http://www.liquibase.org/xml/ns/opensearch"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.29.xsd
+        http://www.liquibase.org/xml/ns/opensearch http://www.liquibase.org/xml/ns/opensearch/liquibase-opensearch-1.0.xsd"
+        logicalFilePath="child-logical.xml">
+
+    <changeSet id="1" author="test">
+        <opensearch:httpRequest>
+            <opensearch:method>PUT</opensearch:method>
+            <opensearch:path>/testindex-logical-file-path</opensearch:path>
+        </opensearch:httpRequest>
+    </changeSet>
+
+</databaseChangeLog>

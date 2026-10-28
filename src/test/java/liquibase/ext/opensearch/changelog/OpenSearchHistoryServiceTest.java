@@ -2,10 +2,13 @@ package liquibase.ext.opensearch.changelog;
 
 import liquibase.ContextExpression;
 import liquibase.change.CheckSum;
+import liquibase.changelog.ChangeSet;
 import liquibase.changelog.RanChangeSet;
 import liquibase.exception.DatabaseException;
 import liquibase.ext.opensearch.database.OpenSearchLiquibaseDatabase;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -97,5 +100,20 @@ class OpenSearchHistoryServiceTest {
         historyService.reset();
 
         assertThat(historyService.getNextSequenceValue()).isEqualTo(1);
+    }
+
+    /**
+     * The document ID used to update/delete an entry must match the one it has been written with (i.e.
+     * {@link RanChangeSet#toString()}), also for file paths which liquibase normalises.
+     */
+    @ParameterizedTest
+    @ValueSource(strings = {"db/changelog.yaml", "/db/changelog.yaml", "db/./changelog.yaml", "classpath:db/changelog.yaml", "db\\changelog.yaml"})
+    void theDocumentIdMatchesTheStoredEntry(final String filePath) {
+        final var changeSet = new ChangeSet("1", "author", false, false, filePath, null, null, null);
+        final var storedEntry = new RanChangeSet(changeSet, ChangeSet.ExecType.EXECUTED, null, null);
+
+        assertThat(OpenSearchHistoryService.documentId(changeSet))
+                .isEqualTo(storedEntry.toString())
+                .isEqualTo("db/changelog.yaml::1::author");
     }
 }
