@@ -453,18 +453,34 @@ class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
         this.doLiquibaseUpdate(changeLogFile);
         assertThat(this.indexExists("testindex-rollback-2")).isTrue();
 
-        new CommandScope(RollbackCountCommandStep.COMMAND_NAME)
-                .addArgumentValue(DbUrlConnectionArgumentsCommandStep.DATABASE_ARG, this.database)
-                .addArgumentValue(DatabaseChangelogCommandStep.CHANGELOG_FILE_ARG, changeLogFile)
-                .addArgumentValue(RollbackCountCommandStep.COUNT_ARG, 1)
-                .execute();
+        this.rollbackCount(changeLogFile, 1);
 
+        // only the last changeset has been rolled back
+        assertThat(this.indexExists("testindex-rollback-1")).isTrue();
         assertThat(this.indexExists("testindex-rollback-2")).isFalse();
         assertThat(this.loadRanChangeSets()).extracting(RanChangeSet::getId).containsExactly("1");
 
         // the rolled back changeset must run again
         assertThat(executedChangeSetCount(this.doLiquibaseUpdate(changeLogFile))).isEqualTo(1);
         assertThat(this.indexExists("testindex-rollback-2")).isTrue();
+    }
+
+    /**
+     * {@link liquibase.ext.opensearch.change.HttpRequestChange} cannot generate its own rollback, thus a rollback of a
+     * changeset without an explicit {@code rollback} block must fail and leave everything as it is.
+     */
+    @SneakyThrows
+    @Test
+    void itFailsToRollBackAHttpRequestWithoutRollbackBlock() {
+        final var changeLogFile = "liquibase/ext/changelog.httprequest.yaml";
+        this.doLiquibaseUpdate(changeLogFile);
+        assertThat(this.indexExists("testindex")).isTrue();
+
+        assertThatThrownBy(() -> this.rollbackCount(changeLogFile, 1))
+                .hasMessageContaining("No inverse to liquibase.ext.opensearch.change.HttpRequestChange created");
+
+        assertThat(this.indexExists("testindex")).isTrue();
+        assertThat(this.loadRanChangeSets()).extracting(RanChangeSet::getId).containsExactly("1");
     }
 
     /**
@@ -661,6 +677,14 @@ class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
         new CommandScope(TagCommandStep.COMMAND_NAME)
                 .addArgumentValue(DbUrlConnectionArgumentsCommandStep.DATABASE_ARG, this.database)
                 .addArgumentValue(TagCommandStep.TAG_ARG, tag)
+                .execute();
+    }
+
+    private void rollbackCount(final String changeLogFile, final int count) throws Exception {
+        new CommandScope(RollbackCountCommandStep.COMMAND_NAME)
+                .addArgumentValue(DbUrlConnectionArgumentsCommandStep.DATABASE_ARG, this.database)
+                .addArgumentValue(DatabaseChangelogCommandStep.CHANGELOG_FILE_ARG, changeLogFile)
+                .addArgumentValue(RollbackCountCommandStep.COUNT_ARG, count)
                 .execute();
     }
 
