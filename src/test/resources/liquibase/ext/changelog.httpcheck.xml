@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xmlns:opensearch="http://www.liquibase.org/xml/ns/opensearch"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.29.xsd
+        http://www.liquibase.org/xml/ns/opensearch http://www.liquibase.org/xml/ns/opensearch/liquibase-opensearch-1.0.xsd">
+
+    <changeSet id="1" author="test">
+        <opensearch:httpRequest>
+            <opensearch:method>PUT</opensearch:method>
+            <opensearch:path>/xml-httpcheck-existing</opensearch:path>
+        </opensearch:httpRequest>
+        <opensearch:httpRequest>
+            <opensearch:method>PUT</opensearch:method>
+            <opensearch:path>/xml-httpcheck-existing/_doc/1?refresh=true</opensearch:path>
+            <opensearch:body>{ "testfield": "foo" }</opensearch:body>
+        </opensearch:httpRequest>
+    </changeSet>
+
+    <changeSet id="2" author="test">
+        <preConditions>
+            <opensearch:httpCheck method="HEAD" path="/xml-httpcheck-existing"/>
+            <not>
+                <opensearch:httpCheck path="/xml-httpcheck-missing"/>
+            </not>
+            <opensearch:httpCheck method="POST" path="/xml-httpcheck-existing/_count" jsonPointer="/count" expectedValue="0">
+                <opensearch:body>
+                    { "query": { "term": { "testfield": "bar" } } }
+                </opensearch:body>
+            </opensearch:httpCheck>
+        </preConditions>
+        <opensearch:httpRequest>
+            <opensearch:method>PUT</opensearch:method>
+            <opensearch:path>/xml-httpcheck-target</opensearch:path>
+        </opensearch:httpRequest>
+    </changeSet>
+
+    <changeSet id="3" author="test">
+        <preConditions onFail="MARK_RAN">
+            <opensearch:httpCheck path="/xml-httpcheck-missing" expectedStatusCode="200"/>
+        </preConditions>
+        <opensearch:httpRequest>
+            <opensearch:method>PUT</opensearch:method>
+            <opensearch:path>/xml-httpcheck-skipped</opensearch:path>
+        </opensearch:httpRequest>
+    </changeSet>
+
+</databaseChangeLog>

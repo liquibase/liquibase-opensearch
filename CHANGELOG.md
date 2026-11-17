@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+* New `httpCheck` precondition: it executes an HTTP request (`GET`, `HEAD` or `POST`) against OpenSearch and holds if
+  the response has the expected status code (default: `200`) and, optionally, the response body contains the expected
+  value at a JSON pointer. This allows e.g. checking whether an index exists, how a field is mapped or how many
+  documents match a query. The SQL-specific Liquibase preconditions (e.g. `tableExists`, `sqlCheck`) remain
+  unsupported.
+
 ### Changed
 
 * `httpRequest` is now validated more strictly: `method` must be one of `POST`, `PUT`, `DELETE` or `PATCH` (the same

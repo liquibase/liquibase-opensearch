@@ -1,0 +1,77 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1
+      author: test
+      changes:
+        - httpRequest:
+            method: PUT
+            path: /httpcheck-existing
+            body: >
+              { "mappings": { "properties": { "testfield": { "type": "keyword" } } } }
+        - httpRequest:
+            method: PUT
+            path: /httpcheck-existing/_doc/1?refresh=true
+            body: >
+              { "testfield": "foo" }
+  - changeSet:
+      id: 2
+      author: test
+      comment: the precondition holds as the index exists (HTTP 200 is expected by default)
+      preConditions:
+        - httpCheck:
+            path: /httpcheck-existing
+      changes:
+        - httpRequest:
+            method: PUT
+            path: /httpcheck-status
+  - changeSet:
+      id: 3
+      author: test
+      comment: the precondition holds as the index does not exist
+      preConditions:
+        - httpCheck:
+            path: /httpcheck-missing
+            expectedStatusCode: 404
+      changes:
+        - httpRequest:
+            method: PUT
+            path: /httpcheck-404
+  - changeSet:
+      id: 4
+      author: test
+      preConditions:
+        - httpCheck:
+            method: HEAD
+            path: /httpcheck-existing
+      changes:
+        - httpRequest:
+            method: PUT
+            path: /httpcheck-head
+  - changeSet:
+      id: 5
+      author: test
+      preConditions:
+        - httpCheck:
+            path: /httpcheck-existing/_mapping
+            jsonPointer: /httpcheck-existing/mappings/properties/testfield/type
+            expectedValue: keyword
+      changes:
+        - httpRequest:
+            method: PUT
+            path: /httpcheck-jsonpointer
+  - changeSet:
+      id: 6
+      author: test
+      comment: the precondition holds as no document matches the query (non-string values are compared as JSON)
+      preConditions:
+        - httpCheck:
+            method: POST
+            path: /httpcheck-existing/_count
+            body: >
+              { "query": { "term": { "testfield": "bar" } } }
+            jsonPointer: /count
+            expectedValue: "0"
+      changes:
+        - httpRequest:
+            method: PUT
+            path: /httpcheck-post

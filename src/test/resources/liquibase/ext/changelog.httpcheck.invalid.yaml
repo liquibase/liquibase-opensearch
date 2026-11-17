@@ -1,0 +1,12 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1
+      author: test
+      preConditions:
+        - httpCheck:
+            method: PUT
+            path: /httpcheck-invalid
+      changes:
+        - httpRequest:
+            method: PUT
+            path: /httpcheck-invalid
