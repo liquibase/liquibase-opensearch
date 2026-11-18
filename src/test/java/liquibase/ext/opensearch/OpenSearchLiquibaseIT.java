@@ -36,6 +36,7 @@ import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 
 class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
 
@@ -604,6 +605,58 @@ class OpenSearchLiquibaseIT extends AbstractOpenSearchLiquibaseIT {
         assertThat(this.getDocumentCount(this.database.getDatabaseChangeLogTableName())).isEqualTo(1);
         // the lock must have been released again
         assertThat(this.getDocumentCount(this.database.getDatabaseChangeLogLockTableName())).isZero();
+    }
+
+    @SneakyThrows
+    @Test
+    void itExecutesChangeSetsWhoseHttpCheckPreconditionHolds() {
+        assertThat(executedChangeSetCount(this.doLiquibaseUpdate("liquibase/ext/changelog.httpcheck.yaml"))).isEqualTo(6);
+        assertThat(this.indexExists("httpcheck-status")).isTrue();
+        assertThat(this.indexExists("httpcheck-404")).isTrue();
+        assertThat(this.indexExists("httpcheck-head")).isTrue();
+        assertThat(this.indexExists("httpcheck-jsonpointer")).isTrue();
+        assertThat(this.indexExists("httpcheck-post")).isTrue();
+    }
+
+    @SneakyThrows
+    @Test
+    void itMarksChangeSetsAsRanIfTheirHttpCheckPreconditionFailsWithOnFailMarkRan() {
+        this.doLiquibaseUpdate("liquibase/ext/changelog.httpcheck.mark-ran.yaml");
+        assertThat(this.indexExists("httpcheck-skipped-status")).isFalse();
+        assertThat(this.indexExists("httpcheck-skipped-jsonpointer")).isFalse();
+        assertThat(this.loadRanChangeSets()).extracting(RanChangeSet::getId, RanChangeSet::getExecType).containsExactlyInAnyOrder(
+                tuple("1", ChangeSet.ExecType.MARK_RAN),
+                tuple("2", ChangeSet.ExecType.MARK_RAN));
+    }
+
+    @SneakyThrows
+    @Test
+    void itHaltsIfAHttpCheckPreconditionFails() {
+        assertThatThrownBy(() -> this.doLiquibaseUpdate("liquibase/ext/changelog.httpcheck.halt.yaml"))
+                .hasStackTraceContaining("httpCheck GET /httpcheck-missing: expected HTTP status 200 but got 404");
+        assertThat(this.indexExists("httpcheck-halt")).isFalse();
+        assertThat(this.changelogEntryCount()).isZero();
+    }
+
+    @SneakyThrows
+    @Test
+    void itHaltsOnAnInvalidHttpCheckPrecondition() {
+        assertThatThrownBy(() -> this.doLiquibaseUpdate("liquibase/ext/changelog.httpcheck.invalid.yaml"))
+                .hasStackTraceContaining("invalid httpCheck: method must be one of GET, HEAD, POST but was 'PUT'");
+        assertThat(this.indexExists("httpcheck-invalid")).isFalse();
+        assertThat(this.changelogEntryCount()).isZero();
+    }
+
+    @SneakyThrows
+    @Test
+    void itSupportsTheHttpCheckPreconditionWithXMLChangelog() {
+        this.doLiquibaseUpdate("liquibase/ext/changelog.httpcheck.xml");
+        assertThat(this.indexExists("xml-httpcheck-target")).isTrue();
+        assertThat(this.indexExists("xml-httpcheck-skipped")).isFalse();
+        assertThat(this.loadRanChangeSets()).extracting(RanChangeSet::getId, RanChangeSet::getExecType).containsExactlyInAnyOrder(
+                tuple("1", ChangeSet.ExecType.EXECUTED),
+                tuple("2", ChangeSet.ExecType.EXECUTED),
+                tuple("3", ChangeSet.ExecType.MARK_RAN));
     }
 
     private static List<Integer> range(final int fromInclusive, final int toInclusive) {

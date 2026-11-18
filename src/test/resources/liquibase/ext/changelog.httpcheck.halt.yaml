@@ -1,0 +1,11 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1
+      author: test
+      preConditions:
+        - httpCheck:
+            path: /httpcheck-missing
+      changes:
+        - httpRequest:
+            method: PUT
+            path: /httpcheck-halt

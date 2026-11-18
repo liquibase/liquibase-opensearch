@@ -31,4 +31,29 @@
         </xsd:complexType>
     </xsd:element>
 
+    <xsd:simpleType name="httpCheckMethods" final="restriction">
+        <xsd:restriction base="xsd:string">
+            <!-- methods which can be used to read data from OpenSearch (POST is needed for e.g. `_search` and `_count`) -->
+            <xsd:enumeration value="GET" />
+            <xsd:enumeration value="HEAD" />
+            <xsd:enumeration value="POST" />
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <!-- precondition: executes an HTTP request and checks the status code and optionally a value of the response -->
+    <xsd:element name="httpCheck">
+        <xsd:complexType>
+            <xsd:all>
+                <xsd:element name="body" type="xsd:string" minOccurs="0" />
+            </xsd:all>
+            <xsd:attribute name="method" type="httpCheckMethods" default="GET" />
+            <xsd:attribute name="contentType" type="xsd:string" />
+            <xsd:attribute name="path" type="xsd:string" use="required" />
+            <xsd:attribute name="body" type="xsd:string" />
+            <xsd:attribute name="expectedStatusCode" type="xsd:int" default="200" />
+            <xsd:attribute name="jsonPointer" type="xsd:string" />
+            <xsd:attribute name="expectedValue" type="xsd:string" />
+        </xsd:complexType>
+    </xsd:element>
+
 </xsd:schema>

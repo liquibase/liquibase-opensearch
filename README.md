@@ -70,6 +70,72 @@ All other fields are mandatory. `method` must be one of `POST`, `PUT`, `DELETE` 
 data in OpenSearch) and `path` must start with a `/`. Invalid changes are reported when the changelog is validated,
 i.e. before any changeset runs.
 
+### Supported Preconditions
+
+The Liquibase preconditions which don't need to access the database work as usual: `and`, `or`, `not`, `dbms`,
+`runningAs`, `changeLogPropertyDefined`, `changeSetExecuted` and `customPrecondition` (incl. `onFail`/`onError`).
+The preconditions which are specific to SQL databases (e.g. `tableExists`, `columnExists`, `sqlCheck`, `rowCount`)
+are not supported.
+
+Instead, this extension offers the generic `httpCheck` precondition: it executes an HTTP request against OpenSearch
+and holds if the response has the expected status code and (optionally) the response body contains the expected value
+at the given [JSON pointer]:
+```yaml
+databaseChangeLog:
+  - changeSet:
+      id: 1
+      author: test
+      preConditions:
+        - onFail: MARK_RAN
+        # the index must exist
+        - httpCheck:
+            method: HEAD
+            path: /testindex
+        # the field must be mapped as `keyword`
+        - httpCheck:
+            path: /testindex/_mapping
+            jsonPointer: /testindex/mappings/properties/testfield/type
+            expectedValue: keyword
+        # no document may match the query
+        - httpCheck:
+            method: POST
+            path: /testindex/_count
+            body: >
+              { "query": { "term": { "testfield": "foo" } } }
+            jsonPointer: /count
+            expectedValue: "0"
+      changes:
+        - httpRequest:
+            # ...
+```
+
+The same in XML:
+```xml
+<preConditions onFail="MARK_RAN">
+    <opensearch:httpCheck method="HEAD" path="/testindex"/>
+    <opensearch:httpCheck path="/testindex/_mapping" jsonPointer="/testindex/mappings/properties/testfield/type" expectedValue="keyword"/>
+    <opensearch:httpCheck method="POST" path="/testindex/_count" jsonPointer="/count" expectedValue="0">
+        <opensearch:body>{ "query": { "term": { "testfield": "foo" } } }</opensearch:body>
+    </opensearch:httpCheck>
+</preConditions>
+```
+
+The fields:
+* `path` (mandatory): the path of the request, must start with a `/`.
+* `method`: one of `GET` (default), `HEAD` or `POST` (needed by some read APIs like `_search` and `_count`).
+* `body` and `contentType`: the optional request body and its content type (default: `application/json`).
+* `expectedStatusCode`: the expected HTTP status code (default: `200`). E.g. use `404` to check that an index does not
+  exist.
+* `jsonPointer` and `expectedValue`: if set (only both together and not with `HEAD`), the value at the JSON pointer of
+  the response body must be equal to `expectedValue`. Strings are compared without their quotes, all other values
+  (numbers, booleans, `null`, objects and arrays) as compact JSON (e.g. `0`, `true` or `{"a":1}`).
+
+If the response does not match, the precondition fails (handled by `onFail`). If the state can't be checked, it is an
+error (handled by `onError`): this is the case if the precondition is invalid, if the request itself fails (e.g. the
+connection is lost) or if the response has an unexpected status code which indicates a server error (`5xx`) or missing
+permissions (`401`, `403`). This prevents e.g. `onFail: MARK_RAN` from skipping a changeset forever because OpenSearch
+was temporarily unavailable. Like all preconditions, `httpCheck` is not part of the checksum of the changeset.
+
 ### Unsupported Liquibase Commands
 
 `drop-all` is not supported: for OpenSearch it would mean deleting every index of the cluster. It fails with an error
@@ -170,6 +236,7 @@ This project is licensed under the Apache License Version 2.0 - see the [LICENSE
 [`liquibase-opensearch-spring-boot-starter`]: https://github.com/liquibase/liquibase-opensearch-springboot-starter/
 [Liquibase CLI]: https://docs.liquibase.com/secure/reference-guide-5-1/parameters/working-with-command-parameters
 [GitHub releases page]: https://github.com/liquibase/liquibase-opensearch/releases
+[JSON pointer]: https://datatracker.ietf.org/doc/html/rfc6901
 [custom-client]: https://docs.opensearch.org/docs/latest/clients/java/
 [CustomOpenSearchClientLiquibaseIT]: src/test/java/liquibase/ext/opensearch/CustomOpenSearchClientLiquibaseIT.java
 [Semantic Versioning]: https://semver.org/spec/v2.0.0.html
